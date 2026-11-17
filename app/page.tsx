@@ -72,8 +72,61 @@ export default function Home() {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
   const [loginOpen, setLoginOpen] = useState(false);
+  const [studentMode, setStudentMode] = useState<"login" | "signup">("login");
+  const [studentProfile, setStudentProfile] = useState<any>(null);
   const [search, setSearch] = useState("");
 
+  // Online Test State
+  const [testIndex, setTestIndex] = useState(0);
+  const [testAnswers, setTestAnswers] = useState<Record<number, number>>({});
+  const [testSeconds, setTestSeconds] = useState(30 * 60);
+  const [testResult, setTestResult] = useState<{
+    correct: number;
+    wrong: number;
+    skipped: number;
+    score: number;
+    total: number;
+  } | null>(null);
+useEffect(() => {
+  const loadProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, name, username, role, student_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Profile Error:", error.message);
+      return;
+    }
+
+    setStudentProfile(data);
+  };
+
+  const checkSession = async () => {
+    const { data } = await supabase.auth.getSession();
+
+    if (data.session?.user) {
+      loadProfile(data.session.user.id);
+    }
+  };
+
+  checkSession();
+
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      if (session?.user) {
+        loadProfile(session.user.id);
+      } else {
+        setStudentProfile(null);
+      }
+    }
+  );
+
+  return () => {
+    listener.subscription.unsubscribe();
+  };
+}, []);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminLoggedIn, setAdminLoggedIn] = useState(false);
@@ -165,7 +218,27 @@ async function logoutAdmin() {
       setPage("adminLogin");
     }
   }
+useEffect(() => {
+  const handleAdminShortcut = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      setPage("adminLogin");
+    }
+  };
 
+  window.addEventListener("keydown", handleAdminShortcut);
+
+  return () => {
+    window.removeEventListener("keydown", handleAdminShortcut);
+  };
+}, []);
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("admin") === "login") {
+    setPage("adminLogin");
+  }
+}, []);
   const loginAdmin = async () => {
   const { data, error } = await supabase.auth.signInWithPassword({
     email: adminEmail.trim(),
@@ -423,6 +496,65 @@ async function logoutAdmin() {
     }
   }
 
+  const testQuestions = questions.filter(
+    (q) => q.subject === selectedSubject && q.topic === selectedTopic
+  );
+
+  function startTest(topic = selectedTopic) {
+    if (!studentProfile) {
+      setLoginOpen(true);
+      return;
+    }
+    const availableQuestions = questions.filter(
+      (q) => q.subject === selectedSubject && q.topic === topic
+    );
+    if (availableQuestions.length === 0) {
+      alert("इस टॉपिक में अभी प्रश्न उपलब्ध नहीं हैं।");
+      return;
+    }
+    setSelectedTopic(topic);
+    setTestIndex(0);
+    setTestAnswers({});
+    setTestSeconds(30 * 60);
+    setTestResult(null);
+    setPage("test");
+  }
+
+  function submitTest() {
+    if (page !== "test" || testResult) return;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let skippedCount = 0;
+
+    testQuestions.forEach((question, index) => {
+      const answer = testAnswers[index];
+      if (answer === undefined) skippedCount++;
+      else if (answer === question.correct) correctCount++;
+      else wrongCount++;
+    });
+
+    setTestResult({
+      correct: correctCount,
+      wrong: wrongCount,
+      skipped: skippedCount,
+      score: correctCount - wrongCount / 3,
+      total: testQuestions.length,
+    });
+    setPage("result");
+  }
+
+  useEffect(() => {
+    if (page !== "test") return;
+    if (testSeconds <= 0) {
+      submitTest();
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setTestSeconds((seconds) => seconds - 1);
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [page, testSeconds]);
+
   const filteredQuestions = questions.filter((q) =>
     (!filterSubject || q.subject === filterSubject) &&
     (!filterTopic || q.topic === filterTopic)
@@ -452,14 +584,48 @@ async function logoutAdmin() {
 
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setPage("home")} className={`${buttonClass} bg-blue-600`}>
+            
               Home
             </button>
-            <button onClick={() => setLoginOpen(true)} className={`${buttonClass} bg-slate-700 text-white`}>
-              Login / Register
-            </button>
-            <button onClick={openAdmin} className={`${buttonClass} bg-yellow-400 text-black`}>
-              Admin Panel
-            </button>
+            
+{studentProfile ? (
+  <div className="bg-slate-800 rounded-xl p-3 text-sm text-white">
+    <p className="font-bold text-yellow-400">
+      {studentProfile.name || "Student"}
+    </p>
+    <p>Username: {studentProfile.username || "Not set"}</p>
+   <p className="text-slate-300">
+  Student ID: {studentProfile.student_id}
+</p>
+    <button
+      onClick={async () => {
+        await supabase.auth.signOut();
+        setStudentProfile(null);
+        setLoginOpen(false);
+        setPage("home");
+      }}
+      className="mt-2 bg-red-600 px-3 py-1 rounded-lg"
+    >
+      Logout
+    </button>
+  </div>
+) : (
+  <button
+    onClick={() => setLoginOpen(true)}
+    className={`${buttonClass} bg-slate-700 text-white`}
+  >
+    Login / Register
+  </button>
+)}
+
+            {adminLoggedIn && (
+  <button
+    onClick={openAdmin}
+    className={`${buttonClass} bg-yellow-400 text-black`}
+  >
+    Admin Panel
+  </button>
+)}
           </div>
         </div>
       </header>
@@ -578,7 +744,11 @@ async function logoutAdmin() {
                 key={topic}
                 onClick={() => {
                   setSelectedTopic(topic);
-                  setLoginOpen(true);
+                  if (studentProfile) {
+                    startTest(topic);
+                  } else {
+                    setLoginOpen(true);
+                  }
                 }}
                 className="bg-white border rounded-xl p-5 text-left font-semibold hover:border-blue-500 shadow-sm"
               >
@@ -592,6 +762,173 @@ async function logoutAdmin() {
               अभी इस विषय में टॉपिक नहीं जोड़े गए हैं।
             </p>
           )}
+        </section>
+      )}
+
+      {page === "test" && (
+        <section className="max-w-5xl mx-auto px-4 py-8">
+          <div className="bg-white rounded-2xl shadow-sm border p-5 mb-5">
+            <div className="flex flex-wrap justify-between items-center gap-3">
+              <div>
+                <p className="text-sm text-blue-700 font-semibold">{selectedSubject}</p>
+                <h2 className="text-2xl font-bold">{selectedTopic} - Online Test</h2>
+                <p className="text-slate-500 text-sm mt-1">
+                  प्रश्न {testIndex + 1} / {testQuestions.length}
+                </p>
+              </div>
+              <div className="bg-red-50 text-red-700 rounded-xl px-4 py-3 font-bold text-xl">
+                {Math.floor(testSeconds / 60).toString().padStart(2, "0")}:
+                {(testSeconds % 60).toString().padStart(2, "0")}
+              </div>
+            </div>
+          </div>
+
+          {testQuestions.length > 0 && testQuestions[testIndex] ? (
+            <div className="bg-white border rounded-2xl p-6 shadow-sm">
+              <h3 className="text-xl font-bold mb-6">
+                Q{testIndex + 1}. {testQuestions[testIndex].question}
+              </h3>
+              <div className="grid gap-3">
+                {testQuestions[testIndex].options.map((option, optionIndex) => (
+                  <button
+                    key={optionIndex}
+                    onClick={() =>
+                      setTestAnswers((previous) => ({
+                        ...previous,
+                        [testIndex]: optionIndex,
+                      }))
+                    }
+                    className={`w-full text-left border rounded-xl p-4 ${
+                      testAnswers[testIndex] === optionIndex
+                        ? "border-blue-700 bg-blue-50 text-blue-900 font-bold"
+                        : "hover:border-blue-400"
+                    }`}
+                  >
+                    {["A", "B", "C", "D"][optionIndex]}. {option}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap justify-between gap-3 mt-8">
+                <button
+                  disabled={testIndex === 0}
+                  onClick={() => setTestIndex((index) => Math.max(0, index - 1))}
+                  className="bg-slate-200 px-5 py-3 rounded-lg font-semibold disabled:opacity-40"
+                >
+                  ← Previous
+                </button>
+                {testIndex < testQuestions.length - 1 ? (
+                  <button
+                    onClick={() => setTestIndex((index) => index + 1)}
+                    className="bg-blue-700 text-white px-5 py-3 rounded-lg font-semibold"
+                  >
+                    Next →
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (confirm("क्या आप टेस्ट Submit करना चाहते हैं?")) submitTest();
+                    }}
+                    className="bg-green-700 text-white px-5 py-3 rounded-lg font-semibold"
+                  >
+                    Submit Test
+                  </button>
+                )}
+              </div>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {testQuestions.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setTestIndex(index)}
+                    className={`w-10 h-10 rounded-lg font-semibold ${
+                      testIndex === index
+                        ? "bg-blue-900 text-white"
+                        : testAnswers[index] !== undefined
+                          ? "bg-green-100 text-green-800"
+                          : "bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl p-6">
+              इस टॉपिक में प्रश्न उपलब्ध नहीं हैं।
+              <button onClick={() => setPage("topics")} className="block mt-4 text-blue-700">
+                वापस जाएँ
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {page === "result" && testResult && (
+        <section className="max-w-4xl mx-auto px-4 py-10">
+          <div className="bg-white rounded-2xl border shadow-sm p-6">
+            <h2 className="text-3xl font-black text-center mb-2">Test Result</h2>
+            <p className="text-center text-slate-500 mb-7">{selectedSubject} / {selectedTopic}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+              <div className="bg-green-50 rounded-xl p-4">
+                <p className="text-slate-500">सही</p>
+                <p className="text-3xl font-bold text-green-700">{testResult.correct}</p>
+              </div>
+              <div className="bg-red-50 rounded-xl p-4">
+                <p className="text-slate-500">गलत</p>
+                <p className="text-3xl font-bold text-red-700">{testResult.wrong}</p>
+              </div>
+              <div className="bg-slate-100 rounded-xl p-4">
+                <p className="text-slate-500">छोड़े</p>
+                <p className="text-3xl font-bold">{testResult.skipped}</p>
+              </div>
+              <div className="bg-blue-50 rounded-xl p-4">
+                <p className="text-slate-500">स्कोर</p>
+                <p className="text-3xl font-bold text-blue-800">{testResult.score.toFixed(2)}</p>
+              </div>
+            </div>
+            <p className="text-center mt-4 text-sm text-slate-500">
+              कुल प्रश्न: {testResult.total} | सही +1, गलत -1/3, खाली 0
+            </p>
+
+            <h3 className="text-xl font-bold mt-8 mb-4">प्रश्नों का समाधान</h3>
+            <div className="space-y-4">
+              {testQuestions.map((question, index) => (
+                <div key={question.id} className="border rounded-xl p-4">
+                  <p className="font-bold mb-2">{index + 1}. {question.question}</p>
+                  <p className="text-sm mb-1">
+                    आपका उत्तर: {testAnswers[index] === undefined
+                      ? "नहीं दिया"
+                      : question.options[testAnswers[index]]}
+                  </p>
+                  <p className="text-sm text-green-700 font-semibold">
+                    सही उत्तर: {question.options[question.correct]}
+                  </p>
+                  <p className="text-sm text-slate-600 mt-2">{question.explanation}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-3 mt-8">
+              <button
+                onClick={() => {
+                  setTestIndex(0);
+                  setTestAnswers({});
+                  setTestSeconds(30 * 60);
+                  setTestResult(null);
+                  setPage("test");
+                }}
+                className="bg-blue-700 text-white px-5 py-3 rounded-lg font-semibold"
+              >
+                फिर से टेस्ट दें
+              </button>
+              <button
+                onClick={() => setPage("topics")}
+                className="bg-slate-200 px-5 py-3 rounded-lg font-semibold"
+              >
+                Topics पर वापस जाएँ
+              </button>
+            </div>
+          </div>
         </section>
       )}
 
@@ -628,6 +965,44 @@ async function logoutAdmin() {
           </div>
         </section>
       )}
+
+{page === "adminLogin" && (
+  <div className="max-w-md mx-auto mt-12 bg-white shadow-xl rounded-2xl p-6">
+    <h2 className="text-2xl font-bold mb-5 text-center">
+      Admin Login
+    </h2>
+
+    <input
+      type="email"
+      placeholder="Admin Email"
+      value={adminEmail}
+      onChange={(e) => setAdminEmail(e.target.value)}
+      className="w-full border rounded-lg p-3 mb-3"
+    />
+
+    <input
+      type="password"
+      placeholder="Password"
+      value={adminPassword}
+      onChange={(e) => setAdminPassword(e.target.value)}
+      className="w-full border rounded-lg p-3 mb-4"
+    />
+
+    <button
+      onClick={loginAdmin}
+      className="w-full bg-blue-950 text-white rounded-lg p-3 font-bold"
+    >
+      Login as Admin
+    </button>
+
+    <button
+      onClick={() => setPage("home")}
+      className="w-full mt-3 text-slate-600"
+    >
+      वापस Home पर जाएँ
+    </button>
+  </div>
+)}
 
       {page === "admin" && adminLoggedIn && (
         <section className="max-w-6xl mx-auto px-4 py-8">
@@ -944,44 +1319,162 @@ async function logoutAdmin() {
         </section>
       )}
 
-      {loginOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">Login / Register</h2>
-              <button onClick={() => setLoginOpen(false)} className="text-2xl">×</button>
-            </div>
+      
+{loginOpen && (
+  <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-xl p-6 w-full max-w-md text-slate-900">
+      <div className="flex justify-between items-center mb-5">
+        <h2 className="text-2xl font-bold">Student Account</h2>
+        <button onClick={() => setLoginOpen(false)} className="text-2xl">×</button>
+      </div>
 
-            {selectedSubject && (
-              <p className="bg-blue-50 p-3 rounded-lg mb-2">
-                चुना गया विषय: <b>{selectedSubject}</b>
-              </p>
-            )}
-            {selectedTopic && (
-              <p className="bg-blue-50 p-3 rounded-lg mb-4">
-                चुना गया टॉपिक: <b>{selectedTopic}</b>
-              </p>
-            )}
+      <div className="flex gap-2 mb-5">
+        <button
+          onClick={() => setStudentMode("login")}
+          className={`flex-1 p-3 rounded-lg font-bold ${studentMode === "login" ? "bg-blue-950 text-white" : "bg-slate-200"}`}
+        >
+          Login
+        </button>
+        <button
+          onClick={() => setStudentMode("signup")}
+          className={`flex-1 p-3 rounded-lg font-bold ${studentMode === "signup" ? "bg-blue-950 text-white" : "bg-slate-200"}`}
+        >
+          Signup
+        </button>
+      </div>
 
-            <input type="tel" placeholder="मोबाइल नंबर" className="w-full border rounded-lg p-3 mb-3" />
-            <button
-              onClick={() => alert("असली OTP Login सिस्टम अगले चरण में जोड़ा जाएगा।")}
-              className="w-full bg-blue-950 text-white rounded-lg p-3 font-bold"
-            >
-              Get OTP
-            </button>
-            <button
-              onClick={() => {
-                setLoginOpen(false);
-                setSelectedTopic("");
-              }}
-              className="w-full mt-3 p-2 text-slate-600"
-            >
-              बंद करें
-            </button>
-          </div>
-        </div>
+      {studentMode === "signup" && (
+        <>
+          <input
+            type="text"
+            id="studentName"
+            placeholder="अपना पूरा नाम"
+            className="w-full border rounded-lg p-3 mb-3"
+          />
+
+          <input
+            type="text"
+            id="studentUsername"
+            placeholder="Username"
+            className="w-full border rounded-lg p-3 mb-3"
+          />
+        </>
       )}
+
+      <input
+        type="email"
+        id="studentEmail"
+        placeholder="Email"
+        className="w-full border rounded-lg p-3 mb-3"
+      />
+
+      <input
+        type="password"
+        id="studentPassword"
+        placeholder="Password (कम से कम 6 अक्षर)"
+        className="w-full border rounded-lg p-3 mb-4"
+      />
+
+      {studentMode === "signup" ? (
+        <button
+          onClick={async () => {
+            const name = (document.getElementById("studentName") as HTMLInputElement).value.trim();
+            const username = (document.getElementById("studentUsername") as HTMLInputElement).value.trim().toLowerCase();
+            const email = (document.getElementById("studentEmail") as HTMLInputElement).value.trim();
+            const password = (document.getElementById("studentPassword") as HTMLInputElement).value;
+
+            if (!name || !username || !email || !password) {
+              alert("सभी जानकारी भरें");
+              return;
+            }
+
+            if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+              alert("Username 3-20 अक्षर का रखें। केवल English अक्षर, नंबर और _ इस्तेमाल करें।");
+              return;
+            }
+
+            if (password.length < 6) {
+              alert("Password कम से कम 6 अक्षर का होना चाहिए।");
+              return;
+            }
+
+            const { data, error } = await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: { name, username },
+              },
+            });
+
+            if (error) {
+              alert(error.message);
+              return;
+            }
+if (data.session) {
+  setLoginOpen(false);
+  if (selectedSubject && selectedTopic) {
+    setPage("test");
+    setTestIndex(0);
+    setTestAnswers({});
+    setTestSeconds(30 * 60);
+    setTestResult(null);
+  }
+} else {
+  setStudentMode("login");
+  alert("Signup सफल! Email Confirmation पूरा करके Login करें।");
+}
+          }}
+          className="w-full bg-blue-950 text-white rounded-lg p-3 font-bold"
+        >
+          Create Account
+        </button>
+      ) : (
+        <button
+          onClick={async () => {
+            const email = (document.getElementById("studentEmail") as HTMLInputElement).value.trim();
+            const password = (document.getElementById("studentPassword") as HTMLInputElement).value;
+
+            if (!email || !password) {
+              alert("Email और Password भरें");
+              return;
+            }
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+
+            if (error) {
+              alert(error.message);
+              return;
+            }
+
+            if (data.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+              setAdminLoggedIn(true);
+              setPage("admin");
+            } else {
+              setLoginOpen(false);
+              if (selectedSubject && selectedTopic) {
+                setTestIndex(0);
+                setTestAnswers({});
+                setTestSeconds(30 * 60);
+                setTestResult(null);
+                setPage("test");
+              }
+            }
+          }}
+          className="w-full bg-green-700 text-white rounded-lg p-3 font-bold"
+        >
+          Login
+        </button>
+      )}
+
+      <p className="text-xs text-slate-500 mt-4">
+        Login अभी Email और Password से होगा।
+      </p>
+    </div>
+  </div>
+)}
 
       <footer className="bg-slate-950 text-white text-center py-7 mt-12">
         <h2 className="font-bold text-xl text-yellow-400">TOPPER TEST</h2>
