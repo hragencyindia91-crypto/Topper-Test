@@ -1,4 +1,4 @@
-
+f
 "use client";
 
 import { useEffect, useState } from "react";
@@ -331,19 +331,122 @@ export default function Home() {
     XLSX.writeFile(workbook, "TOPPER_TEST_प्रश्न_टेम्पलेट.xlsx");
   }
 
-  async function importExcel(e: { target: HTMLInputElement }) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  
+async function importExcel(e: { target: HTMLInputElement }) {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    try {
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
 
-      if (!firstSheet) {
-        alert("Excel फाइल में कोई शीट नहीं मिली।");
+    if (!firstSheet) {
+      alert("Excel फाइल में कोई शीट नहीं मिली।");
+      return;
+    }
+
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+      firstSheet,
+      { defval: "" }
+    );
+
+    const imported: Question[] = [];
+    const errors: string[] = [];
+
+    rows.forEach((row, index) => {
+      const excelSubject = String(row["विषय"] ?? "").trim();
+      const excelTopic = String(row["टॉपिक"] ?? "").trim();
+
+      // अगर Excel में टॉपिक अलग कॉलम में नहीं है
+      // तो विषय वाले कॉलम को टॉपिक मानेंगे।
+      const subject = excelTopic
+        ? excelSubject
+        : "राजस्थान इतिहास";
+
+      const topic = excelTopic || excelSubject;
+
+      const question = String(row["प्रश्न"] ?? "").trim();
+
+      const options = [
+        String(row["विकल्प A"] ?? row["विकल्प 1"] ?? "").trim(),
+        String(row["विकल्प B"] ?? row["विकल्प 2"] ?? "").trim(),
+        String(row["विकल्प C"] ?? row["विकल्प 3"] ?? "").trim(),
+        String(row["विकल्प D"] ?? row["विकल्प 4"] ?? "").trim(),
+      ];
+
+      const answerText = String(row["सही उत्तर"] ?? "").trim().toUpperCase();
+      const explanation = String(row["व्याख्या"] ?? "").trim();
+
+      if (!question && options.every(o => !o) && !explanation) {
         return;
       }
+
+      if (!subjects.includes(subject)) {
+        errors.push(`पंक्ति ${index + 2}: विषय "${subject}" मौजूद नहीं है`);
+        return;
+      }
+
+      if (!(topics[subject] || []).includes(topic)) {
+        errors.push(`पंक्ति ${index + 2}: टॉपिक "${topic}" मौजूद नहीं है`);
+        return;
+      }
+
+      if (!question || options.some(o => !o) || !explanation) {
+        errors.push(`पंक्ति ${index + 2}: प्रश्न, चारों विकल्प और व्याख्या भरें`);
+        return;
+      }
+
+      const answerMap: Record<string, number> = {
+        A: 0,
+        B: 1,
+        C: 2,
+        D: 3,
+        "1": 0,
+        "2": 1,
+        "3": 2,
+        "4": 3,
+      };
+
+      const correct = answerMap[answerText];
+
+      if (correct === undefined) {
+        errors.push(`पंक्ति ${index + 2}: सही उत्तर A, B, C, D या 1, 2, 3, 4 होना चाहिए`);
+        return;
+      }
+
+      imported.push({
+        id: Date.now() + questions.length + index,
+        subject,
+        topic,
+        question,
+        options,
+        correct,
+        explanation,
+      });
+    });
+
+    if (imported.length > 0) {
+      setQuestions(previous => [...previous, ...imported]);
+    }
+
+    const errorMessage = errors.length
+      ? `\n\nसमस्या वाली पंक्तियाँ:\n${errors.slice(0, 5).join("\n")}${errors.length > 5 ? `\nऔर ${errors.length - 5} पंक्तियाँ...` : ""}`
+      : "";
+
+    alert(
+      `${imported.length} प्रश्न सफलतापूर्वक इम्पोर्ट हुए।` +
+      (errors.length ? `\n${errors.length} पंक्तियाँ इम्पोर्ट नहीं हुईं।` : "") +
+      errorMessage
+    );
+
+  } catch {
+    alert("फाइल पढ़ने में समस्या आई। कृपया सही Excel (.xlsx) या CSV फाइल चुनें।");
+  } finally {
+    e.target.value = "";
+  }
+}
+
 
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, {
         defval: "",
