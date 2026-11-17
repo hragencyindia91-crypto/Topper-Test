@@ -1,47 +1,31 @@
+
 {
-    "name": "tslib",
-    "author": "Microsoft Corp.",
-    "homepage": "https://www.typescriptlang.org/",
-    "version": "2.8.1",
-    "license": "0BSD",
-    "description": "Runtime library for TypeScript helper functions",
-    "keywords": [
-        "TypeScript",
-        "Microsoft",
-        "compiler",
-        "language",
-        "javascript",
-        "tslib",
-        "runtime"
-    ],
-    "bugs": {
-        "url": "https://github.com/Microsoft/TypeScript/issues"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/Microsoft/tslib.git"
-    },
-    "main": "tslib.js",
-    "module": "tslib.es6.js",
-    "jsnext:main": "tslib.es6.js",
-    "typings": "tslib.d.ts",
-    "sideEffects": false,
-    "exports": {
-        ".": {
-            "module": {
-                "types": "./modules/index.d.ts",
-                "default": "./tslib.es6.mjs"
-            },
-            "import": {
-                "node": "./modules/index.js",
-                "default": {
-                    "types": "./modules/index.d.ts",
-                    "default": "./tslib.es6.mjs"
-                }
-            },
-            "default": "./tslib.js"
-        },
-        "./*": "./*",
-        "./": "./"
-    }
+  "name": "topper-test",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
+    "lucide-react": "^0.468.0",
+    "next": "15.5.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.6",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5"
+  }
 }
