@@ -1,8 +1,11 @@
-
 "use client";
+
+import { supabase } from "@/lib/supabase/client";
 
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
+
+const ADMIN_EMAIL = "hrpramodnagar@gmail.com";
 
 const defaultSubjects = [
   "राजस्थान इतिहास",
@@ -19,6 +22,21 @@ const defaultSubjects = [
   "करंट अफेयर्स",
 ];
 
+const subjectIcons: Record<string, string> = {
+  "राजस्थान इतिहास": "🏰",
+  "राजस्थान भूगोल": "🌍",
+  "राजस्थान कला एवं संस्कृति": "🎨",
+  "राजस्थान राजव्यवस्था": "⚖️",
+  "राजस्थान अर्थव्यवस्था": "📊",
+  "राजस्थान सामान्य ज्ञान": "📚",
+  "हिंदी": "✍️",
+  "गणित": "➗",
+  "कंप्यूटर": "💻",
+  "सामान्य विज्ञान": "🔬",
+  "रीजनिंग": "🧠",
+  "करंट अफेयर्स": "📰",
+};
+
 const defaultTopics: Record<string, string[]> = {
   "राजस्थान इतिहास": ["प्राचीन इतिहास", "मध्यकालीन इतिहास", "आधुनिक इतिहास"],
   "राजस्थान भूगोल": ["भौतिक स्वरूप", "नदियाँ", "जलवायु"],
@@ -26,19 +44,13 @@ const defaultTopics: Record<string, string[]> = {
   "राजस्थान राजव्यवस्था": ["राज्यपाल", "मुख्यमंत्री", "विधानसभा"],
   "राजस्थान अर्थव्यवस्था": ["कृषि", "उद्योग", "बजट"],
   "राजस्थान सामान्य ज्ञान": ["प्रमुख तथ्य", "जिले", "प्रमुख संस्थान"],
-  हिंदी: ["संधि", "समास", "व्याकरण"],
-  गणित: ["प्रतिशत", "लाभ एवं हानि", "औसत"],
-  कंप्यूटर: ["कंप्यूटर परिचय", "हार्डवेयर", "सॉफ्टवेयर"],
+  "हिंदी": ["संधि", "समास", "व्याकरण"],
+  "गणित": ["प्रतिशत", "लाभ एवं हानि", "औसत"],
+  "कंप्यूटर": ["कंप्यूटर परिचय", "हार्डवेयर", "सॉफ्टवेयर"],
   "सामान्य विज्ञान": ["भौतिक विज्ञान", "रसायन विज्ञान", "जीव विज्ञान"],
-  रीजनिंग: ["श्रृंखला", "कोडिंग", "दिशा ज्ञान"],
+  "रीजनिंग": ["श्रृंखला", "कोडिंग", "दिशा ज्ञान"],
   "करंट अफेयर्स": ["राष्ट्रीय", "अंतरराष्ट्रीय", "राजस्थान"],
 };
-
-const features = [
-  { title: "Daily Quiz", description: "रोज नए प्रश्नों का अभ्यास" },
-  { title: "Mock Test", description: "परीक्षा की तरह टेस्ट" },
-  { title: "Solutions", description: "हर प्रश्न का सही उत्तर और विस्तृत व्याख्या" },
-];
 
 type Question = {
   id: number;
@@ -60,15 +72,11 @@ export default function Home() {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
   const [loginOpen, setLoginOpen] = useState(false);
-  const [studentName, setStudentName] = useState("");
-  const [studentMobile, setStudentMobile] = useState("");
-  const [student, setStudent] = useState<{ name: string; mobile: string } | null>(null);
-  const [testQuestions, setTestQuestions] = useState<Question[]>([]);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [reviewQuestions, setReviewQuestions] = useState<number[]>([]);
-  const [timeLeft, setTimeLeft] = useState(60 * 60);
-  const [testSubmitted, setTestSubmitted] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminLoggedIn, setAdminLoggedIn] = useState(false);
 
   const [newSubject, setNewSubject] = useState("");
   const [newTopic, setNewTopic] = useState("");
@@ -78,6 +86,37 @@ export default function Home() {
   const [option2, setOption2] = useState("");
   const [option3, setOption3] = useState("");
   const [option4, setOption4] = useState("");
+  useEffect(() => {
+  const checkAdminSession = async () => {
+    const { data } = await supabase.auth.getSession();
+
+    const isAdmin =
+      data.session?.user?.email?.toLowerCase() ===
+      ADMIN_EMAIL.toLowerCase();
+
+    setAdminLoggedIn(isAdmin);
+
+    if (isAdmin) {
+      setPage("admin");
+    }
+  };
+
+  checkAdminSession();
+
+  const { data: authListener } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      const isAdmin =
+        session?.user?.email?.toLowerCase() ===
+        ADMIN_EMAIL.toLowerCase();
+
+      setAdminLoggedIn(isAdmin);
+    }
+  );
+
+  return () => {
+    authListener.subscription.unsubscribe();
+  };
+}, []);
   const [correct, setCorrect] = useState(0);
   const [explanation, setExplanation] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -90,12 +129,10 @@ export default function Home() {
       const savedSubjects = localStorage.getItem("topper_subjects");
       const savedTopics = localStorage.getItem("topper_topics");
       const savedQuestions = localStorage.getItem("topper_questions");
-      const savedStudent = localStorage.getItem("topper_student");
 
       if (savedSubjects) setSubjects(JSON.parse(savedSubjects));
       if (savedTopics) setTopics(JSON.parse(savedTopics));
       if (savedQuestions) setQuestions(JSON.parse(savedQuestions));
-      if (savedStudent) setStudent(JSON.parse(savedStudent));
     } catch {
       console.log("Saved data could not be loaded");
     }
@@ -104,67 +141,53 @@ export default function Home() {
 
   useEffect(() => {
     if (!loaded) return;
-
     localStorage.setItem("topper_subjects", JSON.stringify(subjects));
     localStorage.setItem("topper_topics", JSON.stringify(topics));
     localStorage.setItem("topper_questions", JSON.stringify(questions));
   }, [subjects, topics, questions, loaded]);
+async function logoutAdmin() {
+  const { error } = await supabase.auth.signOut();
 
-  useEffect(() => {
-    if (page !== "test" || testSubmitted) return;
-    const timer = window.setInterval(() => {
-      setTimeLeft((previous) => {
-        if (previous <= 1) {
-          window.clearInterval(timer);
-          setTestSubmitted(true);
-          return 0;
-        }
-        return previous - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [page, testSubmitted]);
+  if (error) {
+    alert("Logout नहीं हुआ: " + error.message);
+    return;
+  }
 
-  function beginTest() {
-    const available = questions.filter((q) => q.subject === selectedSubject && q.topic === selectedTopic);
-    if (available.length < 50) {
-      alert(`इस टॉपिक में अभी ${available.length} प्रश्न हैं। टेस्ट शुरू करने के लिए 50 प्रश्न जोड़ें।`);
-      return;
+  setAdminLoggedIn(false);
+  setAdminPassword("");
+  setPage("home");
+  alert("Admin Logout Successful!");
+}
+  function openAdmin() {
+    if (adminLoggedIn) {
+      setPage("admin");
+    } else {
+      setPage("adminLogin");
     }
-    setTestQuestions(available.slice(0, 50));
-    setCurrentQuestion(0);
-    setAnswers({});
-    setReviewQuestions([]);
-    setTimeLeft(60 * 60);
-    setTestSubmitted(false);
-    setLoginOpen(false);
-    setPage("test");
   }
 
-  function completeStudentLogin() {
-    const name = studentName.trim();
-    const mobile = studentMobile.trim();
-    if (!name) return alert("अपना नाम लिखें।");
-    if (!/^[6-9]\d{9}$/.test(mobile)) return alert("10 अंकों का सही मोबाइल नंबर लिखें।");
-    const profile = { name, mobile };
-    setStudent(profile);
-    localStorage.setItem("topper_student", JSON.stringify(profile));
-    setStudentName("");
-    setStudentMobile("");
-    if (selectedTopic) beginTest();
-    else setLoginOpen(false);
+  const loginAdmin = async () => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: adminEmail.trim(),
+    password: adminPassword,
+  });
+
+  if (error) {
+    alert("Login Failed: " + error.message);
+    return;
   }
 
-  function submitTest() {
-    if (!testSubmitted && !confirm("क्या आप टेस्ट सबमिट करना चाहते हैं?")) return;
-    setTestSubmitted(true);
+  if (data.user?.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    await supabase.auth.signOut();
+    alert("यह अकाउंट Admin के लिए अधिकृत नहीं है।");
+    return;
   }
 
-  function formatTime(seconds: number) {
-    const minutes = Math.floor(seconds / 60);
-    const remaining = seconds % 60;
-    return `${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
-  }
+  setAdminLoggedIn(true);
+  setPage("admin");
+  setAdminPassword("");
+  alert("Admin Login Successful!");
+};
 
   function addSubject() {
     const name = newSubject.trim();
@@ -180,11 +203,9 @@ export default function Home() {
     if (!confirm(`क्या "${name}" विषय हटाना चाहते हैं?`)) return;
 
     setSubjects(subjects.filter((s) => s !== name));
-
     const updated = { ...topics };
     delete updated[name];
     setTopics(updated);
-
     setQuestions(questions.filter((q) => q.subject !== name));
 
     if (selectedSubject === name) setSelectedSubject("");
@@ -195,7 +216,7 @@ export default function Home() {
     if (!newName || newName === oldName) return;
     if (subjects.includes(newName)) return alert("यह नाम पहले से मौजूद है");
 
-    setSubjects(subjects.map((s) => (s === oldName ? newName : s)));
+    setSubjects(subjects.map((s) => s === oldName ? newName : s));
 
     const updated = { ...topics };
     updated[newName] = updated[oldName] || [];
@@ -243,7 +264,7 @@ export default function Home() {
 
     setTopics({
       ...topics,
-      [selectedSubject]: current.map((t) => (t === oldName ? newName : t)),
+      [selectedSubject]: current.map((t) => t === oldName ? newName : t),
     });
 
     setQuestions(questions.map((q) =>
@@ -269,12 +290,7 @@ export default function Home() {
     if (!selectedTopic) return alert("टॉपिक चुनें");
     if (!questionText.trim()) return alert("प्रश्न लिखें");
 
-    const options = [
-      option1.trim(),
-      option2.trim(),
-      option3.trim(),
-      option4.trim(),
-    ];
+    const options = [option1.trim(), option2.trim(), option3.trim(), option4.trim()];
 
     if (options.some((o) => !o)) return alert("चारों विकल्प भरें");
     if (!explanation.trim()) return alert("प्रश्न की व्याख्या लिखें");
@@ -290,9 +306,7 @@ export default function Home() {
     };
 
     if (editingId !== null) {
-      setQuestions(questions.map((q) =>
-        q.id === editingId ? newQuestion : q
-      ));
+      setQuestions(questions.map((q) => q.id === editingId ? newQuestion : q));
       alert("प्रश्न अपडेट हो गया");
     } else {
       setQuestions([...questions, newQuestion]);
@@ -313,7 +327,6 @@ export default function Home() {
     setCorrect(q.correct);
     setExplanation(q.explanation);
     setEditingId(q.id);
-
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -331,24 +344,21 @@ export default function Home() {
     XLSX.writeFile(workbook, "TOPPER_TEST_प्रश्न_टेम्पलेट.xlsx");
   }
 
-  async function importExcel(e: { target: HTMLInputElement }) {
+  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-      if (!firstSheet) {
+      if (!sheet) {
         alert("Excel फाइल में कोई शीट नहीं मिली।");
         return;
       }
 
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, {
-        defval: "",
-      });
-
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
       const imported: Question[] = [];
       const errors: string[] = [];
 
@@ -362,32 +372,33 @@ export default function Home() {
           String(row["विकल्प 3"] ?? "").trim(),
           String(row["विकल्प 4"] ?? "").trim(),
         ];
-        const answer = Number(row["सही उत्तर"]);
+        const answerText = String(row["सही उत्तर"] ?? "").trim();
+        const answerMatch = answerText.match(/[1-4]/);
+        const answer = answerMatch ? Number(answerMatch[0]) : 0;
         const explanation = String(row["व्याख्या"] ?? "").trim();
-
-        if (!subject && !topic && !question && options.every((o) => !o) && !explanation) {
-          return;
-        }
 
         if (!subjects.includes(subject)) {
           errors.push(`पंक्ति ${index + 2}: विषय "${subject}" मौजूद नहीं है`);
           return;
         }
+
         if (!(topics[subject] || []).includes(topic)) {
-          errors.push(`पंक्ति ${index + 2}: "${subject}" में टॉपिक "${topic}" मौजूद नहीं है`);
+          errors.push(`पंक्ति ${index + 2}: टॉपिक "${topic}" मौजूद नहीं है`);
           return;
         }
+
         if (!question || options.some((o) => !o) || !explanation) {
           errors.push(`पंक्ति ${index + 2}: प्रश्न, चारों विकल्प और व्याख्या भरें`);
           return;
         }
-        if (!Number.isInteger(answer) || answer < 1 || answer > 4) {
+
+        if (![1, 2, 3, 4].includes(answer)) {
           errors.push(`पंक्ति ${index + 2}: सही उत्तर में 1, 2, 3 या 4 लिखें`);
           return;
         }
 
         imported.push({
-          id: Date.now() + questions.length + index,
+          id: Date.now() + index,
           subject,
           topic,
           question,
@@ -397,16 +408,16 @@ export default function Home() {
         });
       });
 
-      if (imported.length > 0) {
+      if (imported.length) {
         setQuestions((previous) => [...previous, ...imported]);
       }
 
-      const errorMessage = errors.length
-        ? `\n\nसमस्या वाली पंक्तियाँ:\n${errors.slice(0, 5).join("\n")}${errors.length > 5 ? `\nऔर ${errors.length - 5} पंक्तियाँ...` : ""}`
-        : "";
-      alert(`${imported.length} प्रश्न सफलतापूर्वक इम्पोर्ट हुए।${errors.length ? `\n${errors.length} पंक्तियाँ इम्पोर्ट नहीं हुईं।` : ""}${errorMessage}`);
+      alert(
+        `${imported.length} प्रश्न सफलतापूर्वक जोड़े गए।` +
+        (errors.length ? "\n\nगलत पंक्तियाँ:\n" + errors.slice(0, 8).join("\n") : "")
+      );
     } catch {
-      alert("फाइल पढ़ने में समस्या आई। कृपया सही Excel (.xlsx) या CSV फाइल चुनें।");
+      alert("फाइल पढ़ने में समस्या आई। सही Excel या CSV फाइल चुनें।");
     } finally {
       e.target.value = "";
     }
@@ -417,26 +428,36 @@ export default function Home() {
     (!filterTopic || q.topic === filterTopic)
   );
 
+  const filteredSubjects = subjects.filter((subject) =>
+    subject.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalTopics = Object.values(topics).reduce(
+    (sum, arr) => sum + arr.length, 0
+  );
+
+  const buttonClass = "px-4 py-2 rounded-lg font-semibold transition";
+
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="bg-blue-950 text-white">
-        <div className="max-w-6xl mx-auto px-4 py-5 flex flex-wrap justify-between items-center gap-3">
-          <button onClick={() => setPage("home")} className="text-2xl font-bold">
-            TOPPER TEST
+    <main className="min-h-screen bg-slate-100 text-slate-900">
+
+      <header className="bg-slate-950 text-white shadow-lg">
+        <div className="max-w-7xl mx-auto px-5 py-5 flex flex-wrap justify-between items-center gap-4">
+          <button onClick={() => setPage("home")} className="text-left">
+            <h1 className="text-3xl font-black text-yellow-400">TOPPER TEST</h1>
+            <p className="text-sm text-slate-300">
+              Rajasthan Competitive Exam Practice
+            </p>
           </button>
 
-          <div className="flex gap-2 items-center">
-            {student && <span className="text-sm text-white">नमस्ते, {student.name}</span>}
-            <button
-              onClick={() => setLoginOpen(true)}
-              className="bg-white text-blue-950 px-4 py-2 rounded-lg font-semibold"
-            >
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setPage("home")} className={`${buttonClass} bg-blue-600`}>
+              Home
+            </button>
+            <button onClick={() => setLoginOpen(true)} className={`${buttonClass} bg-slate-700 text-white`}>
               Login / Register
             </button>
-            <button
-              onClick={() => setPage("admin")}
-              className="bg-yellow-400 text-black px-4 py-2 rounded-lg font-semibold"
-            >
+            <button onClick={openAdmin} className={`${buttonClass} bg-yellow-400 text-black`}>
               Admin Panel
             </button>
           </div>
@@ -445,37 +466,96 @@ export default function Home() {
 
       {page === "home" && (
         <>
-          <section className="max-w-6xl mx-auto px-4 py-8">
-            <h2 className="text-2xl font-bold mb-6">सभी विषय</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {subjects.map((subject, index) => (
-                <button
-                  key={subject}
-                  onClick={() => {
-                    setSelectedSubject(subject);
-                    setPage("topics");
-                  }}
-                  className="bg-white border rounded-xl p-5 text-left shadow-sm hover:shadow-md hover:border-blue-500"
-                >
-                  <p className="text-sm text-blue-700 font-semibold mb-2">
-                    SUBJECT {index + 1}
-                  </p>
-                  <h3 className="font-bold text-lg">{subject}</h3>
-                </button>
+          <section className="bg-gradient-to-r from-blue-950 to-indigo-700 text-white py-16 px-5">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-4xl md:text-5xl font-black mb-4">
+                अपनी तैयारी को दें नई उड़ान!
+              </h2>
+              <p className="text-lg text-blue-100 mb-7">
+                राजस्थान प्रतियोगी परीक्षाओं की तैयारी अब Online Test के साथ।
+              </p>
+              <button
+                onClick={() => document.getElementById("subjects")?.scrollIntoView({ behavior: "smooth" })}
+                className="bg-yellow-400 text-black font-bold px-7 py-3 rounded-xl hover:bg-yellow-300"
+              >
+                Start Practice →
+              </button>
+            </div>
+          </section>
+
+          <section className="max-w-7xl mx-auto px-5 py-10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                ["📚", `${subjects.length}+`, "विषय"],
+                ["📝", "1000+", "प्रश्न (लक्ष्य)"],
+                ["🎯", "Mock Tests", "प्रैक्टिस"],
+                ["🏆", "Analysis", "रिजल्ट"],
+              ].map((item) => (
+                <div key={item[1]} className="bg-white rounded-2xl p-5 shadow-sm text-center">
+                  <div className="text-3xl">{item[0]}</div>
+                  <h3 className="text-xl font-bold mt-2">{item[1]}</h3>
+                  <p className="text-slate-500">{item[2]}</p>
+                </div>
               ))}
             </div>
           </section>
 
-          <section className="bg-white border-t py-10">
-            <div className="max-w-6xl mx-auto px-4">
-              <h2 className="text-2xl font-bold mb-6">हमारी सुविधाएँ</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {features.map((feature) => (
-                  <div key={feature.title} className="border rounded-xl p-6 shadow-sm">
-                    <h3 className="text-xl font-bold text-blue-950 mb-2">
-                      {feature.title}
-                    </h3>
-                    <p className="text-slate-600">{feature.description}</p>
+          <section id="subjects" className="max-w-7xl mx-auto px-5 py-8">
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+              <div>
+                <h2 className="text-3xl font-bold">विषय चुनें</h2>
+                <p className="text-slate-500 mt-1">अपनी तैयारी शुरू करें</p>
+              </div>
+
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="विषय खोजें..."
+                className="border rounded-xl px-4 py-3 w-full md:w-64 outline-blue-500"
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredSubjects.map((subject) => (
+                <div key={subject} className="bg-white rounded-2xl p-6 shadow-sm border hover:shadow-lg transition">
+                  <div className="text-4xl mb-4">{subjectIcons[subject] || "📚"}</div>
+                  <h3 className="text-xl font-bold">{subject}</h3>
+                  <p className="text-slate-500 mt-2">
+                    {(topics[subject] || []).length} Topics
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSelectedSubject(subject);
+                      setPage("topics");
+                    }}
+                    className="mt-5 w-full bg-blue-700 text-white py-3 rounded-xl font-semibold hover:bg-blue-800"
+                  >
+                    Explore Subject →
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {filteredSubjects.length === 0 && (
+              <p className="text-center py-10 text-slate-500">
+                कोई विषय नहीं मिला।
+              </p>
+            )}
+          </section>
+
+          <section className="bg-white border-t py-12">
+            <div className="max-w-7xl mx-auto px-5">
+              <h2 className="text-3xl font-bold mb-6">हमारी सुविधाएँ</h2>
+              <div className="grid md:grid-cols-3 gap-5">
+                {[
+                  ["📝", "Daily Quiz", "रोज नए प्रश्नों का अभ्यास"],
+                  ["🎯", "Mock Test", "परीक्षा की तरह टेस्ट"],
+                  ["📊", "Solutions & Analysis", "हर प्रश्न का उत्तर और रिजल्ट विश्लेषण"],
+                ].map((feature) => (
+                  <div key={feature[1]} className="bg-slate-50 border rounded-xl p-6">
+                    <div className="text-3xl mb-3">{feature[0]}</div>
+                    <h3 className="text-xl font-bold text-blue-950 mb-2">{feature[1]}</h3>
+                    <p className="text-slate-600">{feature[2]}</p>
                   </div>
                 ))}
               </div>
@@ -489,7 +569,8 @@ export default function Home() {
           <button onClick={() => setPage("home")} className="text-blue-700 font-semibold mb-5">
             ← सभी विषय
           </button>
-          <h2 className="text-2xl font-bold mb-5">{selectedSubject}</h2>
+          <h2 className="text-3xl font-bold mb-2">{subjectIcons[selectedSubject]} {selectedSubject}</h2>
+          <p className="text-slate-500 mb-6">अपना टॉपिक चुनें और अभ्यास शुरू करें।</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(topics[selectedSubject] || []).map((topic) => (
@@ -497,24 +578,9 @@ export default function Home() {
                 key={topic}
                 onClick={() => {
                   setSelectedTopic(topic);
-                  if (student) {
-                    const available = questions.filter((q) => q.subject === selectedSubject && q.topic === topic);
-                    if (available.length < 50) {
-                      alert(`इस टॉपिक में अभी ${available.length} प्रश्न हैं। टेस्ट शुरू करने के लिए 50 प्रश्न जोड़ें।`);
-                      return;
-                    }
-                    setTestQuestions(available.slice(0, 50));
-                    setCurrentQuestion(0);
-                    setAnswers({});
-                    setReviewQuestions([]);
-                    setTimeLeft(60 * 60);
-                    setTestSubmitted(false);
-                    setPage("test");
-                  } else {
-                    setLoginOpen(true);
-                  }
+                  setLoginOpen(true);
                 }}
-                className="bg-white border rounded-xl p-5 text-left font-semibold hover:border-blue-500"
+                className="bg-white border rounded-xl p-5 text-left font-semibold hover:border-blue-500 shadow-sm"
               >
                 {topic} →
               </button>
@@ -529,94 +595,62 @@ export default function Home() {
         </section>
       )}
 
-      {page === "test" && (
-        <section className="max-w-6xl mx-auto px-4 py-8">
-          {!testSubmitted ? (
-            <>
-              <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
-                <div>
-                  <h2 className="text-2xl font-bold">{selectedSubject} — {selectedTopic}</h2>
-                  <p className="text-slate-500">विद्यार्थी: {student?.name || "Student"} | प्रश्न {currentQuestion + 1} / {testQuestions.length}</p>
-                </div>
-                <div className={`rounded-xl px-5 py-3 font-bold text-xl ${timeLeft < 300 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-950"}`}>
-                  समय: {formatTime(timeLeft)}
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3 mb-5">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center"><b className="text-2xl">{Object.keys(answers).length}</b><p className="text-sm">Attempted</p></div>
-                <div className="bg-slate-100 border rounded-lg p-3 text-center"><b className="text-2xl">{testQuestions.length - Object.keys(answers).length}</b><p className="text-sm">Unattempted</p></div>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center"><b className="text-2xl">{reviewQuestions.length}</b><p className="text-sm">Review</p></div>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div className="lg:col-span-2 bg-white border rounded-xl p-5">
-                  <p className="text-sm text-blue-700 font-semibold mb-3">प्रश्न {currentQuestion + 1}</p>
-                  <h3 className="text-xl font-bold mb-5">{testQuestions[currentQuestion]?.question}</h3>
-                  <div className="space-y-3">
-                    {testQuestions[currentQuestion]?.options.map((option, index) => (
-                      <button key={index} onClick={() => setAnswers((previous) => ({ ...previous, [testQuestions[currentQuestion].id]: index }))}
-                        className={`w-full text-left border rounded-lg p-4 ${answers[testQuestions[currentQuestion].id] === index ? "border-blue-700 bg-blue-50" : "hover:border-blue-400"}`}>
-                        <b className="mr-2">{["A", "B", "C", "D"][index]}.</b>{option}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-2 mt-6">
-                    <button disabled={currentQuestion === 0} onClick={() => setCurrentQuestion((n) => n - 1)} className="px-5 py-3 rounded-lg bg-slate-200 disabled:opacity-40">← पिछला</button>
-                    <button onClick={() => setReviewQuestions((old) => old.includes(testQuestions[currentQuestion].id) ? old.filter((id) => id !== testQuestions[currentQuestion].id) : [...old, testQuestions[currentQuestion].id])}
-                      className="px-4 py-3 rounded-lg bg-yellow-100 text-yellow-900">{reviewQuestions.includes(testQuestions[currentQuestion]?.id) ? "Review हटाएँ" : "Mark for Review"}</button>
-                    <button disabled={currentQuestion === testQuestions.length - 1} onClick={() => setCurrentQuestion((n) => n + 1)} className="px-5 py-3 rounded-lg bg-blue-950 text-white disabled:opacity-40">अगला →</button>
-                  </div>
-                </div>
-                <div className="bg-white border rounded-xl p-5">
-                  <h3 className="font-bold mb-3">प्रश्न सूची</h3>
-                  <div className="grid grid-cols-5 gap-2">
-                    {testQuestions.map((q, index) => (
-                      <button key={q.id} onClick={() => setCurrentQuestion(index)} className={`rounded-lg p-2 font-semibold ${currentQuestion === index ? "ring-2 ring-blue-700" : ""} ${reviewQuestions.includes(q.id) ? "bg-yellow-300" : answers[q.id] !== undefined ? "bg-green-300" : "bg-slate-200"}`}>{index + 1}</button>
-                    ))}
-                  </div>
-                  <div className="text-xs text-slate-600 space-y-1 mt-4"><p>🟩 Attempted</p><p>🟨 Mark for Review</p><p>⬜ Unattempted</p></div>
-                  <button onClick={submitTest} className="w-full mt-5 bg-red-600 text-white rounded-lg p-3 font-bold">टेस्ट सबमिट करें</button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="bg-white border rounded-xl p-6">
-              <h2 className="text-3xl font-bold mb-2">टेस्ट परिणाम</h2>
-              <p className="text-slate-600 mb-5">{student?.name} — {selectedSubject} / {selectedTopic}</p>
-              {(() => {
-                const right = testQuestions.filter((q) => answers[q.id] === q.correct).length;
-                const wrong = testQuestions.filter((q) => answers[q.id] !== undefined && answers[q.id] !== q.correct).length;
-                const skipped = testQuestions.length - right - wrong;
-                return <div className="grid grid-cols-3 gap-3 mb-6"><div className="bg-green-50 p-4 rounded-lg text-center"><b className="text-3xl">{right}</b><p>सही</p></div><div className="bg-red-50 p-4 rounded-lg text-center"><b className="text-3xl">{wrong}</b><p>गलत</p></div><div className="bg-slate-100 p-4 rounded-lg text-center"><b className="text-3xl">{skipped}</b><p>छोड़े</p></div></div>;
-              })()}
-              <div className="space-y-4">
-                {testQuestions.map((q, index) => (
-                  <div key={q.id} className="border rounded-lg p-4">
-                    <p className="font-bold mb-2">{index + 1}. {q.question}</p>
-                    <p className={answers[q.id] === q.correct ? "text-green-700" : "text-red-700"}>आपका उत्तर: {answers[q.id] === undefined ? "नहीं दिया" : q.options[answers[q.id]]}</p>
-                    <p className="text-green-700 font-semibold">सही उत्तर: {q.options[q.correct]}</p>
-                    <p className="text-slate-600 mt-1">व्याख्या: {q.explanation}</p>
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => setPage("home")} className="mt-6 bg-blue-950 text-white px-6 py-3 rounded-lg">होम पेज पर जाएँ</button>
-            </div>
-          )}
+      {page === "adminLogin" && (
+        <section className="max-w-md mx-auto px-4 py-12">
+          <div className="bg-white border rounded-2xl p-7 shadow-sm">
+            <h2 className="text-2xl font-bold mb-2">Admin Login</h2>
+            <p className="text-slate-500 mb-5">केवल अधिकृत Admin के लिए</p>
+
+            <label className="block font-semibold mb-2">Admin Email</label>
+            <input
+              type="email"
+              value={adminEmail}
+              onChange={(e) => setAdminEmail(e.target.value)}
+              placeholder="Admin Email"
+              className="w-full border rounded-lg p-3 mb-4"
+            />
+
+            <label className="block font-semibold mb-2">Password</label>
+            <input
+              type="password"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full border rounded-lg p-3 mb-5"
+            />
+
+            <button onClick={loginAdmin} className="w-full bg-blue-950 text-white p-3 rounded-lg font-bold">
+              Login
+            </button>
+            <button onClick={() => setPage("home")} className="w-full mt-3 p-2 text-slate-600">
+              ← Home
+            </button>
+          </div>
         </section>
       )}
 
-      {page === "admin" && (
+      {page === "admin" && adminLoggedIn && (
         <section className="max-w-6xl mx-auto px-4 py-8">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
             <div>
               <h2 className="text-3xl font-bold">Admin Dashboard</h2>
               <p className="text-slate-500 mt-1">TOPPER TEST मैनेजमेंट</p>
             </div>
-            <button
-              onClick={() => setPage("home")}
-              className="bg-blue-950 text-white px-5 py-3 rounded-lg"
-            >
-              वेबसाइट देखें
-            </button>
+            <div className="flex gap-3">
+  <button
+    onClick={() => setPage("home")}
+    className="bg-blue-950 text-white px-5 py-3 rounded-lg"
+  >
+    वेबसाइट देखें
+  </button>
+
+  <button
+    onClick={logoutAdmin}
+    className="bg-red-600 text-white px-5 py-3 rounded-lg"
+  >
+    Logout
+  </button>
+</div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -626,9 +660,7 @@ export default function Home() {
             </div>
             <div className="bg-white border rounded-xl p-5">
               <p className="text-slate-500">कुल टॉपिक</p>
-              <h3 className="text-3xl font-bold">
-                {Object.values(topics).reduce((sum, arr) => sum + arr.length, 0)}
-              </h3>
+              <h3 className="text-3xl font-bold">{totalTopics}</h3>
             </div>
             <div className="bg-white border rounded-xl p-5">
               <p className="text-slate-500">कुल प्रश्न</p>
@@ -637,22 +669,13 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap gap-3 mb-6">
-            <button
-              onClick={() => setPage("admin")}
-              className="bg-blue-950 text-white px-5 py-3 rounded-lg font-semibold"
-            >
+            <button onClick={() => setPage("admin")} className="bg-blue-950 text-white px-5 py-3 rounded-lg font-semibold">
               विषय और टॉपिक
             </button>
-            <button
-              onClick={() => setPage("question")}
-              className="bg-green-700 text-white px-5 py-3 rounded-lg font-semibold"
-            >
+            <button onClick={() => setPage("question")} className="bg-green-700 text-white px-5 py-3 rounded-lg font-semibold">
               Question Bank
             </button>
-            <button
-              onClick={() => setPage("upload")}
-              className="bg-purple-700 text-white px-5 py-3 rounded-lg font-semibold"
-            >
+            <button onClick={() => setPage("excel")} className="bg-purple-700 text-white px-5 py-3 rounded-lg font-semibold">
               Excel Bulk Upload
             </button>
           </div>
@@ -670,9 +693,7 @@ export default function Home() {
                 + विषय जोड़ें
               </button>
 
-              <h3 className="text-xl font-bold mt-7 mb-3">
-                सभी विषय ({subjects.length})
-              </h3>
+              <h3 className="text-xl font-bold mt-7 mb-3">सभी विषय ({subjects.length})</h3>
               <div className="space-y-2">
                 {subjects.map((subject) => (
                   <div key={subject} className={`border rounded-lg p-3 ${selectedSubject === subject ? "border-blue-600 bg-blue-50" : ""}`}>
@@ -726,7 +747,9 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
-                  {(topics[selectedSubject] || []).length === 0 && <p className="text-slate-500">अभी कोई टॉपिक नहीं है।</p>}
+                  {(topics[selectedSubject] || []).length === 0 && (
+                    <p className="text-slate-500">अभी कोई टॉपिक नहीं है।</p>
+                  )}
                 </div>
               )}
             </div>
@@ -734,55 +757,7 @@ export default function Home() {
         </section>
       )}
 
-      {page === "upload" && (
-        <section className="max-w-4xl mx-auto px-4 py-8">
-          <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-            <div>
-              <h2 className="text-3xl font-bold">Excel Bulk Upload</h2>
-              <p className="text-slate-500 mt-1">एक साथ कई प्रश्न अपलोड करें</p>
-            </div>
-            <button onClick={() => setPage("admin")} className="bg-blue-950 text-white px-5 py-3 rounded-lg">
-              ← Admin Panel
-            </button>
-          </div>
-
-          <div className="bg-white border rounded-xl p-6">
-            <h3 className="text-xl font-bold mb-3">1. Excel टेम्पलेट डाउनलोड करें</h3>
-            <p className="text-slate-600 mb-4">
-              पहले नीचे दिए बटन से टेम्पलेट डाउनलोड करें और उसी में अपने प्रश्न भरें।
-            </p>
-            <button
-              onClick={downloadExcelTemplate}
-              className="bg-blue-950 text-white px-5 py-3 rounded-lg font-semibold mb-7"
-            >
-              Excel Template डाउनलोड करें
-            </button>
-
-            <h3 className="text-xl font-bold mb-3">2. प्रश्नों वाली Excel फाइल चुनें</h3>
-            <p className="text-slate-600 mb-3">
-              सही उत्तर वाले कॉलम में केवल 1, 2, 3 या 4 लिखें।
-            </p>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={importExcel}
-              className="w-full border rounded-lg p-3"
-            />
-
-            <div className="mt-6 rounded-lg bg-blue-50 p-4 text-sm text-blue-950">
-              <p className="font-bold mb-2">ध्यान दें:</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>विषय और टॉपिक वेबसाइट में पहले से मौजूद होने चाहिए।</li>
-                <li>हर प्रश्न के चारों विकल्प और व्याख्या भरना जरूरी है।</li>
-                <li>कॉलम के नाम और क्रम टेम्पलेट जैसे ही रखें।</li>
-                <li>अपलोड किए गए प्रश्न अभी इसी ब्राउज़र में सेव होंगे।</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {page === "question" && (
+      {page === "question" && adminLoggedIn && (
         <section className="max-w-5xl mx-auto px-4 py-8">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
             <div>
@@ -851,12 +826,7 @@ export default function Home() {
             <div className="grid grid-cols-2 gap-3 mb-5">
               {[0, 1, 2, 3].map((n) => (
                 <label key={n} className={`border rounded-lg p-3 cursor-pointer ${correct === n ? "border-green-600 bg-green-50" : ""}`}>
-                  <input
-                    type="radio"
-                    checked={correct === n}
-                    onChange={() => setCorrect(n)}
-                    className="mr-2"
-                  />
+                  <input type="radio" checked={correct === n} onChange={() => setCorrect(n)} className="mr-2" />
                   विकल्प {n + 1}
                 </label>
               ))}
@@ -916,9 +886,7 @@ export default function Home() {
               <div className="space-y-4">
                 {filteredQuestions.map((q, index) => (
                   <div key={q.id} className="border rounded-xl p-4">
-                    <p className="text-sm text-blue-700 font-semibold mb-2">
-                      {q.subject} / {q.topic}
-                    </p>
+                    <p className="text-sm text-blue-700 font-semibold mb-2">{q.subject} / {q.topic}</p>
                     <h4 className="font-bold mb-3">{index + 1}. {q.question}</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                       {q.options.map((o, i) => (
@@ -942,10 +910,47 @@ export default function Home() {
         </section>
       )}
 
+      {page === "excel" && adminLoggedIn && (
+        <section className="max-w-4xl mx-auto px-4 py-8">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
+            <div>
+              <h2 className="text-3xl font-bold">Excel Bulk Upload</h2>
+              <p className="text-slate-500 mt-1">एक साथ कई प्रश्न जोड़ें</p>
+            </div>
+            <button onClick={() => setPage("admin")} className="bg-blue-950 text-white px-5 py-3 rounded-lg">
+              ← Admin Panel
+            </button>
+          </div>
+
+          <div className="bg-white border rounded-xl p-6">
+            <h3 className="text-xl font-bold mb-3">1. Excel टेम्पलेट डाउनलोड करें</h3>
+            <p className="text-slate-600 mb-4">
+              पहले नीचे दिए बटन से टेम्पलेट डाउनलोड करें। उसी फाइल में अपने प्रश्न भरें।
+            </p>
+            <button onClick={downloadExcelTemplate} className="bg-green-700 text-white px-5 py-3 rounded-lg font-bold mb-8">
+              Excel टेम्पलेट डाउनलोड करें
+            </button>
+
+            <h3 className="text-xl font-bold mb-3">2. भरी हुई Excel फाइल अपलोड करें</h3>
+            <p className="text-slate-600 mb-4">
+              सही उत्तर वाले कॉलम में 1, 2, 3 या 4 लिखें। विषय और टॉपिक वेबसाइट में पहले से मौजूद होने चाहिए।
+            </p>
+            <input type="file" accept=".xlsx,.xls,.csv" onChange={importExcel} className="w-full border rounded-lg p-3" />
+
+            <div className="mt-6 rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-sm text-slate-700">
+              <b>ध्यान दें:</b> प्रश्नों का डेटा अभी इसी ब्राउज़र में सेव होता है। यह स्थायी ऑनलाइन बैकअप नहीं है।
+            </div>
+          </div>
+        </section>
+      )}
+
       {loginOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-3">Login / Register</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Login / Register</h2>
+              <button onClick={() => setLoginOpen(false)} className="text-2xl">×</button>
+            </div>
 
             {selectedSubject && (
               <p className="bg-blue-50 p-3 rounded-lg mb-2">
@@ -958,27 +963,13 @@ export default function Home() {
               </p>
             )}
 
-            <input
-              value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
-              placeholder="अपना पूरा नाम"
-              className="w-full border rounded-lg p-3 mb-3"
-            />
-            <input
-              type="tel"
-              value={studentMobile}
-              onChange={(e) => setStudentMobile(e.target.value)}
-              placeholder="10 अंकों का मोबाइल नंबर"
-              maxLength={10}
-              className="w-full border rounded-lg p-3 mb-3"
-            />
+            <input type="tel" placeholder="मोबाइल नंबर" className="w-full border rounded-lg p-3 mb-3" />
             <button
-              onClick={completeStudentLogin}
+              onClick={() => alert("असली OTP Login सिस्टम अगले चरण में जोड़ा जाएगा।")}
               className="w-full bg-blue-950 text-white rounded-lg p-3 font-bold"
             >
-              लॉगिन / रजिस्टर करें और टेस्ट शुरू करें
+              Get OTP
             </button>
-            <p className="text-xs text-slate-500 mt-2">यह अभी डेमो लॉगिन है; OTP सत्यापन बाद में जोड़ा जाएगा।</p>
             <button
               onClick={() => {
                 setLoginOpen(false);
@@ -991,6 +982,12 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <footer className="bg-slate-950 text-white text-center py-7 mt-12">
+        <h2 className="font-bold text-xl text-yellow-400">TOPPER TEST</h2>
+        <p className="text-slate-400 mt-2">Rajasthan Competitive Exam Practice Platform</p>
+        <p className="text-slate-500 text-sm mt-3">© 2026 TOPPER TEST. All Rights Reserved.</p>
+      </footer>
     </main>
   );
 }
