@@ -75,18 +75,6 @@ export default function Home() {
   const [studentMode, setStudentMode] = useState<"login" | "signup">("login");
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [search, setSearch] = useState("");
-
-  // Online Test State
-  const [testIndex, setTestIndex] = useState(0);
-  const [testAnswers, setTestAnswers] = useState<Record<number, number>>({});
-  const [testSeconds, setTestSeconds] = useState(30 * 60);
-  const [testResult, setTestResult] = useState<{
-    correct: number;
-    wrong: number;
-    skipped: number;
-    score: number;
-    total: number;
-  } | null>(null);
 useEffect(() => {
   const loadProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -176,8 +164,6 @@ useEffect(() => {
 
   const [filterSubject, setFilterSubject] = useState("");
   const [filterTopic, setFilterTopic] = useState("");
-  const [uploadSubject, setUploadSubject] = useState("राजस्थान इतिहास");
-const [uploadTopic, setUploadTopic] = useState("");
 
   useEffect(() => {
     try {
@@ -410,186 +396,28 @@ useEffect(() => {
     setQuestions(questions.filter((q) => q.id !== id));
   }
 
- 
-
-function downloadExcelTemplate() {
-  const worksheet = XLSX.utils.aoa_to_sheet([
-    ["प्रश्न", "विकल्प A", "विकल्प B", "विकल्प C", "विकल्प D", "सही उत्तर", "व्याख्या"],
-  ]);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "प्रश्न");
-  XLSX.writeFile(workbook, "TOPPER_TEST_प्रश्न_टेम्पलेट.xlsx");
-}
-
-async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  if (!selectedSubject || !selectedTopic) {
-    alert("पहले वेबसाइट पर Subject और Topic चुनें।");
-    e.target.value = "";
-    return;
+  function downloadExcelTemplate() {
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["विषय", "टॉपिक", "प्रश्न", "विकल्प 1", "विकल्प 2", "विकल्प 3", "विकल्प 4", "सही उत्तर", "व्याख्या"],
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "प्रश्न");
+    XLSX.writeFile(workbook, "TOPPER_TEST_प्रश्न_टेम्पलेट.xlsx");
   }
 
-  try {
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: "array" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    if (!sheet) {
-      alert("Excel फाइल में कोई शीट नहीं मिली।");
-      return;
-    }
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-      defval: "",
-    });
-
-    const imported: Question[] = [];
-    const errors: string[] = [];
-
-    const answerMap: Record<string, number> = {
-      A: 0, B: 1, C: 2, D: 3,
-      "1": 0, "2": 1, "3": 2, "4": 3,
-    };
-
-    rows.forEach((row, index) => {
-      const question = String(row["प्रश्न"] ?? "").trim();
-      const options = [
-        String(row["विकल्प A"] ?? row["विकल्प 1"] ?? "").trim(),
-        String(row["विकल्प B"] ?? row["विकल्प 2"] ?? "").trim(),
-        String(row["विकल्प C"] ?? row["विकल्प 3"] ?? "").trim(),
-        String(row["विकल्प D"] ?? row["विकल्प 4"] ?? "").trim(),
-      ];
-      const answerText = String(row["सही उत्तर"] ?? "").trim().toUpperCase();
-      const explanation = String(row["व्याख्या"] ?? "").trim();
-
-      if (!question && options.every((o) => !o) && !explanation) return;
-
-      if (!question || options.some((o) => !o) || !explanation) {
-        errors.push(`पंक्ति ${index + 2}: प्रश्न, चारों विकल्प और व्याख्या भरें।`);
+      if (!sheet) {
+        alert("Excel फाइल में कोई शीट नहीं मिली।");
         return;
       }
-
-      const correctAnswer = answerMap[answerText];
-
-      if (correctAnswer === undefined) {
-        errors.push(`पंक्ति ${index + 2}: सही उत्तर A/B/C/D या 1/2/3/4 होना चाहिए।`);
-        return;
-      }
-
-      imported.push({
-        id: Date.now() + index,
-        subject: selectedSubject,
-        topic: selectedTopic,
-        question,
-        options,
-        correct: correctAnswer,
-        explanation,
-      });
-    });
-
-    if (imported.length > 0) {
-      setQuestions((previous) => [...previous, ...imported]);
-    }
-
-    alert(
-      `${imported.length} प्रश्न सफलतापूर्वक जोड़े गए।` +
-      (errors.length
-        ? `\n${errors.length} पंक्तियाँ नहीं जुड़ीं:\n${errors.slice(0, 8).join("\n")}`
-        : "")
-    );
-  } catch {
-    alert("Excel फाइल पढ़ने में समस्या आई।");
-  } finally {
-    e.target.value = "";
-  }
-}
-
-
-  try {
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: "array" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
-    if (!sheet) {
-      alert("Excel में कोई शीट नहीं मिली।");
-      return;
-    }
-
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-      sheet,
-      { defval: "" }
-    );
-
-    const imported: Question[] = [];
-    const errors: string[] = [];
-
-    const answerMap: Record<string, number> = {
-      A: 0, B: 1, C: 2, D: 3,
-      "1": 0, "2": 1, "3": 2, "4": 3,
-    };
-
-    rows.forEach((row, index) => {
-      const question = String(row["प्रश्न"] ?? "").trim();
-
-      const options = [
-        String(row["विकल्प A"] ?? row["विकल्प 1"] ?? "").trim(),
-        String(row["विकल्प B"] ?? row["विकल्प 2"] ?? "").trim(),
-        String(row["विकल्प C"] ?? row["विकल्प 3"] ?? "").trim(),
-        String(row["विकल्प D"] ?? row["विकल्प 4"] ?? "").trim(),
-      ];
-
-      const answerText = String(row["सही उत्तर"] ?? "")
-        .trim()
-        .toUpperCase();
-
-      const explanation = String(row["व्याख्या"] ?? "").trim();
-
-      if (!question && options.every((o) => !o) && !explanation) {
-        return;
-      }
-
-      if (!question || options.some((o) => !o) || !explanation) {
-        errors.push(`पंक्ति ${index + 2}: प्रश्न, चारों विकल्प और व्याख्या भरें।`);
-        return;
-      }
-
-      const correct = answerMap[answerText];
-
-      if (correct === undefined) {
-        errors.push(`पंक्ति ${index + 2}: सही उत्तर A/B/C/D या 1/2/3/4 होना चाहिए।`);
-        return;
-      }
-
-      imported.push({
-        id: Date.now() + index,
-        subject: uploadSubject,
-        topic: uploadTopic,
-        question,
-        options,
-        correct,
-        explanation,
-      });
-    });
-
-    if (imported.length > 0) {
-      setQuestions((previous) => [...previous, ...imported]);
-    }
-
-    alert(
-      `${imported.length} प्रश्न सफलतापूर्वक जोड़े गए।` +
-      (errors.length
-        ? `\n${errors.length} पंक्तियों में समस्या:\n${errors.slice(0, 8).join("\n")}`
-        : "")
-    );
-  } catch {
-    alert("Excel फाइल पढ़ने में समस्या आई।");
-  } finally {
-    e.target.value = "";
-  }
-}
-
 
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
       const imported: Question[] = [];
@@ -655,65 +483,6 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
       e.target.value = "";
     }
   }
-
-  const testQuestions = questions.filter(
-    (q) => q.subject === selectedSubject && q.topic === selectedTopic
-  );
-
-  function startTest(topic = selectedTopic) {
-    if (!studentProfile) {
-      setLoginOpen(true);
-      return;
-    }
-    const availableQuestions = questions.filter(
-      (q) => q.subject === selectedSubject && q.topic === topic
-    );
-    if (availableQuestions.length === 0) {
-      alert("इस टॉपिक में अभी प्रश्न उपलब्ध नहीं हैं।");
-      return;
-    }
-    setSelectedTopic(topic);
-    setTestIndex(0);
-    setTestAnswers({});
-    setTestSeconds(30 * 60);
-    setTestResult(null);
-    setPage("test");
-  }
-
-  function submitTest() {
-    if (page !== "test" || testResult) return;
-    let correctCount = 0;
-    let wrongCount = 0;
-    let skippedCount = 0;
-
-    testQuestions.forEach((question, index) => {
-      const answer = testAnswers[index];
-      if (answer === undefined) skippedCount++;
-      else if (answer === question.correct) correctCount++;
-      else wrongCount++;
-    });
-
-    setTestResult({
-      correct: correctCount,
-      wrong: wrongCount,
-      skipped: skippedCount,
-      score: correctCount - wrongCount / 3,
-      total: testQuestions.length,
-    });
-    setPage("result");
-  }
-
-  useEffect(() => {
-    if (page !== "test") return;
-    if (testSeconds <= 0) {
-      submitTest();
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      setTestSeconds((seconds) => seconds - 1);
-    }, 1000);
-    return () => window.clearTimeout(timer);
-  }, [page, testSeconds]);
 
   const filteredQuestions = questions.filter((q) =>
     (!filterSubject || q.subject === filterSubject) &&
@@ -904,11 +673,7 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
                 key={topic}
                 onClick={() => {
                   setSelectedTopic(topic);
-                  if (studentProfile) {
-                    startTest(topic);
-                  } else {
-                    setLoginOpen(true);
-                  }
+                  setLoginOpen(true);
                 }}
                 className="bg-white border rounded-xl p-5 text-left font-semibold hover:border-blue-500 shadow-sm"
               >
@@ -922,173 +687,6 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
               अभी इस विषय में टॉपिक नहीं जोड़े गए हैं।
             </p>
           )}
-        </section>
-      )}
-
-      {page === "test" && (
-        <section className="max-w-5xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-2xl shadow-sm border p-5 mb-5">
-            <div className="flex flex-wrap justify-between items-center gap-3">
-              <div>
-                <p className="text-sm text-blue-700 font-semibold">{selectedSubject}</p>
-                <h2 className="text-2xl font-bold">{selectedTopic} - Online Test</h2>
-                <p className="text-slate-500 text-sm mt-1">
-                  प्रश्न {testIndex + 1} / {testQuestions.length}
-                </p>
-              </div>
-              <div className="bg-red-50 text-red-700 rounded-xl px-4 py-3 font-bold text-xl">
-                {Math.floor(testSeconds / 60).toString().padStart(2, "0")}:
-                {(testSeconds % 60).toString().padStart(2, "0")}
-              </div>
-            </div>
-          </div>
-
-          {testQuestions.length > 0 && testQuestions[testIndex] ? (
-            <div className="bg-white border rounded-2xl p-6 shadow-sm">
-              <h3 className="text-xl font-bold mb-6">
-                Q{testIndex + 1}. {testQuestions[testIndex].question}
-              </h3>
-              <div className="grid gap-3">
-                {testQuestions[testIndex].options.map((option, optionIndex) => (
-                  <button
-                    key={optionIndex}
-                    onClick={() =>
-                      setTestAnswers((previous) => ({
-                        ...previous,
-                        [testIndex]: optionIndex,
-                      }))
-                    }
-                    className={`w-full text-left border rounded-xl p-4 ${
-                      testAnswers[testIndex] === optionIndex
-                        ? "border-blue-700 bg-blue-50 text-blue-900 font-bold"
-                        : "hover:border-blue-400"
-                    }`}
-                  >
-                    {["A", "B", "C", "D"][optionIndex]}. {option}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap justify-between gap-3 mt-8">
-                <button
-                  disabled={testIndex === 0}
-                  onClick={() => setTestIndex((index) => Math.max(0, index - 1))}
-                  className="bg-slate-200 px-5 py-3 rounded-lg font-semibold disabled:opacity-40"
-                >
-                  ← Previous
-                </button>
-                {testIndex < testQuestions.length - 1 ? (
-                  <button
-                    onClick={() => setTestIndex((index) => index + 1)}
-                    className="bg-blue-700 text-white px-5 py-3 rounded-lg font-semibold"
-                  >
-                    Next →
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (confirm("क्या आप टेस्ट Submit करना चाहते हैं?")) submitTest();
-                    }}
-                    className="bg-green-700 text-white px-5 py-3 rounded-lg font-semibold"
-                  >
-                    Submit Test
-                  </button>
-                )}
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {testQuestions.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setTestIndex(index)}
-                    className={`w-10 h-10 rounded-lg font-semibold ${
-                      testIndex === index
-                        ? "bg-blue-900 text-white"
-                        : testAnswers[index] !== undefined
-                          ? "bg-green-100 text-green-800"
-                          : "bg-slate-100 text-slate-700"
-                    }`}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl p-6">
-              इस टॉपिक में प्रश्न उपलब्ध नहीं हैं।
-              <button onClick={() => setPage("topics")} className="block mt-4 text-blue-700">
-                वापस जाएँ
-              </button>
-            </div>
-          )}
-        </section>
-      )}
-
-      {page === "result" && testResult && (
-        <section className="max-w-4xl mx-auto px-4 py-10">
-          <div className="bg-white rounded-2xl border shadow-sm p-6">
-            <h2 className="text-3xl font-black text-center mb-2">Test Result</h2>
-            <p className="text-center text-slate-500 mb-7">{selectedSubject} / {selectedTopic}</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-              <div className="bg-green-50 rounded-xl p-4">
-                <p className="text-slate-500">सही</p>
-                <p className="text-3xl font-bold text-green-700">{testResult.correct}</p>
-              </div>
-              <div className="bg-red-50 rounded-xl p-4">
-                <p className="text-slate-500">गलत</p>
-                <p className="text-3xl font-bold text-red-700">{testResult.wrong}</p>
-              </div>
-              <div className="bg-slate-100 rounded-xl p-4">
-                <p className="text-slate-500">छोड़े</p>
-                <p className="text-3xl font-bold">{testResult.skipped}</p>
-              </div>
-              <div className="bg-blue-50 rounded-xl p-4">
-                <p className="text-slate-500">स्कोर</p>
-                <p className="text-3xl font-bold text-blue-800">{testResult.score.toFixed(2)}</p>
-              </div>
-            </div>
-            <p className="text-center mt-4 text-sm text-slate-500">
-              कुल प्रश्न: {testResult.total} | सही +1, गलत -1/3, खाली 0
-            </p>
-
-            <h3 className="text-xl font-bold mt-8 mb-4">प्रश्नों का समाधान</h3>
-            <div className="space-y-4">
-              {testQuestions.map((question, index) => (
-                <div key={question.id} className="border rounded-xl p-4">
-                  <p className="font-bold mb-2">{index + 1}. {question.question}</p>
-                  <p className="text-sm mb-1">
-                    आपका उत्तर: {testAnswers[index] === undefined
-                      ? "नहीं दिया"
-                      : question.options[testAnswers[index]]}
-                  </p>
-                  <p className="text-sm text-green-700 font-semibold">
-                    सही उत्तर: {question.options[question.correct]}
-                  </p>
-                  <p className="text-sm text-slate-600 mt-2">{question.explanation}</p>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-3 mt-8">
-              <button
-                onClick={() => {
-                  setTestIndex(0);
-                  setTestAnswers({});
-                  setTestSeconds(30 * 60);
-                  setTestResult(null);
-                  setPage("test");
-                }}
-                className="bg-blue-700 text-white px-5 py-3 rounded-lg font-semibold"
-              >
-                फिर से टेस्ट दें
-              </button>
-              <button
-                onClick={() => setPage("topics")}
-                className="bg-slate-200 px-5 py-3 rounded-lg font-semibold"
-              >
-                Topics पर वापस जाएँ
-              </button>
-            </div>
-          </div>
         </section>
       )}
 
@@ -1467,36 +1065,9 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
             </button>
 
             <h3 className="text-xl font-bold mb-3">2. भरी हुई Excel फाइल अपलोड करें</h3>
-            <label className="block font-semibold mb-2">Subject चुनें</label>
-<select
-  value={selectedSubject}
-  onChange={(e) => {
-    setSelectedSubject(e.target.value);
-    setSelectedTopic("");
-  }}
-  className="w-full border rounded-lg p-3 mb-4"
->
-  <option value="">Subject चुनें</option>
-  {subjects.map((subject) => (
-    <option key={subject} value={subject}>{subject}</option>
-  ))}
-</select>
-
-<label className="block font-semibold mb-2">Topic चुनें</label>
-<select
-  value={selectedTopic}
-  onChange={(e) => setSelectedTopic(e.target.value)}
-  className="w-full border rounded-lg p-3 mb-4"
-  disabled={!selectedSubject}
->
-  <option value="">Topic चुनें</option>
-  {(topics[selectedSubject] || []).map((topic) => (
-    <option key={topic} value={topic}>{topic}</option>
-  ))}
-</select>
-           <p className="text-slate-600 mb-4">
-  पहले Subject और Topic चुनें। Excel में प्रश्न, विकल्प A, B, C, D, सही उत्तर और व्याख्या भरें। सही उत्तर A/B/C/D या 1/2/3/4 लिखें।
-</p>
+            <p className="text-slate-600 mb-4">
+              सही उत्तर वाले कॉलम में 1, 2, 3 या 4 लिखें। विषय और टॉपिक वेबसाइट में पहले से मौजूद होने चाहिए।
+            </p>
             <input type="file" accept=".xlsx,.xls,.csv" onChange={importExcel} className="w-full border rounded-lg p-3" />
 
             <div className="mt-6 rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-sm text-slate-700">
@@ -1599,13 +1170,6 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
             }
 if (data.session) {
   setLoginOpen(false);
-  if (selectedSubject && selectedTopic) {
-    setPage("test");
-    setTestIndex(0);
-    setTestAnswers({});
-    setTestSeconds(30 * 60);
-    setTestResult(null);
-  }
 } else {
   setStudentMode("login");
   alert("Signup सफल! Email Confirmation पूरा करके Login करें।");
@@ -1640,14 +1204,7 @@ if (data.session) {
               setAdminLoggedIn(true);
               setPage("admin");
             } else {
-              setLoginOpen(false);
-              if (selectedSubject && selectedTopic) {
-                setTestIndex(0);
-                setTestAnswers({});
-                setTestSeconds(30 * 60);
-                setTestResult(null);
-                setPage("test");
-              }
+            setLoginOpen(false);
             }
           }}
           className="w-full bg-green-700 text-white rounded-lg p-3 font-bold"
