@@ -1740,6 +1740,7 @@ if (data.session) {
 <div className="text-center text-red-500 font-bold p-4">
   FOOTER TEST CHECK
 </div>
+      
     <footer className="bg-slate-950 text-white mt-12 px-5 py-10">
   <div className="max-w-7xl mx-auto text-center">
     <h2 className="text-2xl font-bold mb-2">TOPPER TEST</h2>
@@ -1761,6 +1762,7 @@ if (data.session) {
     </p>
   </div>
 </footer>
+  )}
     </main>
   );
 }
