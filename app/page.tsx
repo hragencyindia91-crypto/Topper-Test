@@ -67,7 +67,14 @@ export default function Home() {
   const [topics, setTopics] = useState(defaultTopics);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loaded, setLoaded] = useState(false);
-
+const [notifications, setNotifications] = useState<any[]>([]);
+const [showNotifications, setShowNotifications] = useState(false);
+const [adminNotificationTitle, setAdminNotificationTitle] = useState("");
+const [adminNotificationMessage, setAdminNotificationMessage] = useState("");
+const [adminNotificationAudience, setAdminNotificationAudience] = useState("public");
+const [adminNotificationStudentId, setAdminNotificationStudentId] = useState("");
+const [adminNotificationStudents, setAdminNotificationStudents] = useState<any[]>([]);
+const [adminNotificationLoading, setAdminNotificationLoading] = useState(false);
   const [page, setPage] = useState("home");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
@@ -75,6 +82,59 @@ export default function Home() {
   const [studentMode, setStudentMode] = useState<"login" | "signup">("login");
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [testQuestions, setTestQuestions] = useState<Question[]>([]);
+const [answers, setAnswers] = useState<Record<number, number>>({});
+const [currentQuestion, setCurrentQuestion] = useState(0);
+const [timeLeft, setTimeLeft] = useState(30 * 60);
+const [newTopicTime, setNewTopicTime] = useState(30);
+const [topicTimes, setTopicTimes] = useState<Record<string, number>>({});
+// यहीं startTest, submitTest और shareChallenge के तीनों functions रखो।
+const startTest = (topic: string) => {
+  const matching = questions.filter(
+    (q) => q.subject === selectedSubject && q.topic === topic
+  );
+
+  if (matching.length === 0) {
+    alert("इस टॉपिक में अभी प्रश्न उपलब्ध नहीं हैं।");
+    setLoginOpen(false);
+    return;
+  }
+
+  setSelectedTopic(topic);
+  setTestQuestions(matching);
+  setAnswers({});
+  setCurrentQuestion(0);
+  setLoginOpen(false);
+  setPage("test");
+};
+
+const submitTest = () => {
+  if (window.confirm("क्या आप टेस्ट Submit करना चाहते हैं?")) {
+    setPage("result");
+  }
+};
+
+const shareChallenge = () => {
+  const correct = testQuestions.filter(
+    (q) => answers[q.id] === q.correct
+  ).length;
+
+  const total = testQuestions.length;
+  const score = total
+    ? Math.round((correct / total) * 100)
+    : 0;
+
+  const message =
+    `🏆 TOPPER TEST CHALLENGE\n` +
+    `मैंने ${selectedTopic} टेस्ट में ${score}% स्कोर किया है (${correct}/${total})।\n` +
+    `क्या तुम मुझसे ज्यादा स्कोर कर सकते हो?\n` +
+    window.location.href;
+
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(message)}`,
+    "_blank"
+  );
+};
 useEffect(() => {
   const loadProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -118,7 +178,39 @@ useEffect(() => {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminLoggedIn, setAdminLoggedIn] = useState(false);
+  useEffect(() => {
+  const loadNotifications = async () => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .order("created_at", { ascending: false });
 
+    if (error) {
+      console.error("Notification Error:", error.message);
+      return;
+    }
+
+    setNotifications(data || []);
+  };
+
+  loadNotifications();
+}, []);
+useEffect(() => {
+  const loadNotificationStudents = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, name, username, student_id");
+
+    if (error) {
+      console.error("Students Error:", error.message);
+      return;
+    }
+
+    setAdminNotificationStudents(data || []);
+  };
+
+  loadNotificationStudents();
+}, []);
   const [newSubject, setNewSubject] = useState("");
   const [newTopic, setNewTopic] = useState("");
 
@@ -169,23 +261,40 @@ useEffect(() => {
     try {
       const savedSubjects = localStorage.getItem("topper_subjects");
       const savedTopics = localStorage.getItem("topper_topics");
+      const savedTopicTimes = localStorage.getItem("topper_topic_times");
       const savedQuestions = localStorage.getItem("topper_questions");
 
       if (savedSubjects) setSubjects(JSON.parse(savedSubjects));
       if (savedTopics) setTopics(JSON.parse(savedTopics));
+      if (savedTopicTimes) setTopicTimes(JSON.parse(savedTopicTimes));
       if (savedQuestions) setQuestions(JSON.parse(savedQuestions));
     } catch {
       console.log("Saved data could not be loaded");
     }
     setLoaded(true);
   }, []);
+  useEffect(() => {
+  if (page !== "test") return;
+
+  if (timeLeft <= 0) {
+    setPage("result");
+    return;
+  }
+
+  const timer = setTimeout(() => {
+    setTimeLeft((previous) => previous - 1);
+  }, 1000);
+
+  return () => clearTimeout(timer);
+}, [page, timeLeft]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem("topper_subjects", JSON.stringify(subjects));
     localStorage.setItem("topper_topics", JSON.stringify(topics));
+    localStorage.setItem("topper_topic_times", JSON.stringify(topicTimes));
     localStorage.setItem("topper_questions", JSON.stringify(questions));
-  }, [subjects, topics, questions, loaded]);
+  }, [subjects, topics, questions, topicTimes, loaded]);
 async function logoutAdmin() {
   const { error } = await supabase.auth.signOut();
 
@@ -291,18 +400,23 @@ useEffect(() => {
     if (selectedSubject === oldName) setSelectedSubject(newName);
   }
 
-  function addTopic() {
-    const name = newTopic.trim();
-    if (!selectedSubject) return alert("पहले विषय चुनें");
-    if (!name) return alert("टॉपिक का नाम लिखें");
+ function addTopic() {
+  const name = newTopic.trim();
 
-    const current = topics[selectedSubject] || [];
-    if (current.includes(name)) return alert("यह टॉपिक पहले से मौजूद है");
+  if (!selectedSubject) return alert("पहले विषय चुनें");
+  if (!name) return alert("टॉपिक का नाम लिखें");
 
-    setTopics({ ...topics, [selectedSubject]: [...current, name] });
-    setNewTopic("");
-  }
+  const current = topics[selectedSubject] || [];
+  if (current.includes(name)) return alert("यह टॉपिक पहले से मौजूद है");
 
+  setTopics({ ...topics, [selectedSubject]: [...current, name] });
+
+  const key = `${selectedSubject}::${name}`;
+  setTopicTimes({ ...topicTimes, [key]: newTopicTime });
+
+  setNewTopic("");
+  setNewTopicTime(30);
+}
   function deleteTopic(name: string) {
     if (!confirm(`क्या "${name}" टॉपिक हटाना चाहते हैं?`)) return;
 
@@ -522,13 +636,28 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
             </p>
           </button>
 
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => setPage("home")} className={`${buttonClass} bg-blue-600`}>
-            
-              Home
-            </button>
-            
-{studentProfile ? (
+<div className="flex flex-wrap gap-2">
+
+  <button
+    onClick={() => setPage("home")}
+    className={`${buttonClass} bg-blue-600`}
+  >
+    Home
+  </button>
+
+  <button
+    onClick={() => setShowNotifications(!showNotifications)}
+    className="relative bg-slate-700 text-white px-4 py-2 rounded-lg"
+  >
+    🔔
+    {notifications.length > 0 && (
+      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2">
+        {notifications.length}
+      </span>
+    )}
+  </button>
+
+  {studentProfile ? (
   <div className="bg-slate-800 rounded-xl p-3 text-sm text-white">
     <p className="font-bold text-yellow-400">
       {studentProfile.name || "Student"}
@@ -569,7 +698,40 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
           </div>
         </div>
       </header>
+      {showNotifications && (
+        <div className="max-w-7xl mx-auto px-5 py-4">
+          <div className="bg-white border rounded-xl shadow-lg p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-bold text-xl">Notifications</h2>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="text-red-600 font-bold"
+              >
+                बंद करें ✕
+              </button>
+            </div>
 
+            {notifications.length === 0 ? (
+              <p className="text-gray-500">अभी कोई Notification नहीं है।</p>
+            ) : (
+              notifications.map((item) => (
+                <div key={item.id} className="border-b py-3">
+                  <h3 className="font-bold text-blue-950">
+                    {item.title}
+                  </h3>
+                  <p className="text-gray-700">{item.message}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(item.created_at).toLocaleString("hi-IN")}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      (
+        <></>
       {page === "home" && (
         <>
           <section className="bg-gradient-to-r from-blue-950 to-indigo-700 text-white py-16 px-5">
@@ -667,6 +829,24 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
               </div>
             </div>
           </section>
+
+          <section className="max-w-7xl mx-auto px-5 py-8">
+            <div className="bg-blue-50 border rounded-2xl p-6 text-center">
+              <h2 className="text-2xl font-bold mb-2">
+                Help & Support
+              </h2>
+              <p className="text-gray-600 mb-4">
+                कोई समस्या है? हमारी Support टीम से संपर्क करें।
+              </p>
+              <a
+                href="/support"
+                className="inline-block bg-blue-950 text-white px-8 py-3 rounded-xl font-bold"
+              >
+                Student Support →
+              </a>
+            </div>
+          </section>
+
         </>
       )}
 
@@ -683,9 +863,13 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
               <button
                 key={topic}
                 onClick={() => {
-                  setSelectedTopic(topic);
-                  setLoginOpen(true);
-                }}
+  setSelectedTopic(topic);
+  if (studentProfile) {
+    startTest(topic);
+  } else {
+    setLoginOpen(true);
+  }
+}}
                 className="bg-white border rounded-xl p-5 text-left font-semibold hover:border-blue-500 shadow-sm"
               >
                 {topic} →
@@ -701,6 +885,162 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
         </section>
       )}
 
+      {page === "test" && (
+  <div className="max-w-3xl mx-auto p-4">
+    <h2 className="text-2xl font-bold mb-2">
+      {selectedTopic}
+    </h2>
+<div className="bg-red-100 text-red-700 font-bold text-lg p-3 rounded-lg mb-4">
+  समय शेष: {Math.floor(timeLeft / 60)}:
+  {String(timeLeft % 60).padStart(2, "0")} मिनट
+</div>
+    <p className="mb-4">
+      प्रश्न {currentQuestion + 1} / {testQuestions.length}
+    </p>
+
+    {testQuestions[currentQuestion] && (
+      <div className="border rounded-xl p-4">
+        <h3 className="text-lg font-bold mb-4">
+          {testQuestions[currentQuestion].question}
+        </h3>
+
+        {testQuestions[currentQuestion].options.map((option, index) => (
+          <button
+            key={index}
+            onClick={() =>
+              setAnswers((prev) => ({
+                ...prev,
+                [testQuestions[currentQuestion].id]: index,
+              }))
+            }
+            className={`block w-full text-left border rounded-lg p-3 mb-2 ${
+              answers[testQuestions[currentQuestion].id] === index
+                ? "bg-blue-100 border-blue-500"
+                : "bg-white"
+            }`}
+          >
+            {String.fromCharCode(65 + index)}. {option}
+          </button>
+        ))}
+      </div>
+    )}
+
+    <div className="flex justify-between gap-2 mt-4">
+      <button
+        className="border rounded-lg p-3"
+        disabled={currentQuestion === 0}
+        onClick={() => setCurrentQuestion((n) => n - 1)}
+      >
+        Previous
+      </button>
+
+      {currentQuestion < testQuestions.length - 1 ? (
+        <button
+          className="bg-blue-600 text-white rounded-lg p-3"
+          onClick={() => setCurrentQuestion((n) => n + 1)}
+        >
+          Next
+        </button>
+      ) : (
+        <button
+          className="bg-green-600 text-white rounded-lg p-3"
+          onClick={submitTest}
+        >
+          Submit Test
+        </button>
+      )}
+    </div>
+  </div>
+)}
+
+{page === "result" && (
+  <div className="max-w-3xl mx-auto p-4">
+    {(() => {
+      const correct = testQuestions.filter(
+        (q) => answers[q.id] === q.correct
+      ).length;
+
+      const wrong = testQuestions.filter(
+        (q) => answers[q.id] !== undefined && answers[q.id] !== q.correct
+      ).length;
+
+      const skipped = testQuestions.length - correct - wrong;
+      const score = testQuestions.length
+        ? Math.round((correct / testQuestions.length) * 100)
+        : 0;
+
+      return (
+        <>
+          <h2 className="text-3xl font-bold text-center mb-4">
+            🏆 आपका Result
+          </h2>
+
+          <div className="border rounded-xl p-5 text-center mb-5">
+            <p className="text-gray-600">आपका स्कोर</p>
+            <h1 className="text-5xl font-bold text-green-600">
+              {score}%
+            </h1>
+            <p className="mt-2">
+              {correct} सही / {testQuestions.length} प्रश्न
+            </p>
+
+            <div className="grid grid-cols-3 gap-2 mt-5">
+              <div className="bg-green-100 p-3 rounded-lg">
+                <b>{correct}</b>
+                <p>सही</p>
+              </div>
+              <div className="bg-red-100 p-3 rounded-lg">
+                <b>{wrong}</b>
+                <p>गलत</p>
+              </div>
+              <div className="bg-gray-100 p-3 rounded-lg">
+                <b>{skipped}</b>
+                <p>छोड़े</p>
+              </div>
+            </div>
+
+            <button
+              onClick={shareChallenge}
+              className="w-full bg-green-600 text-white rounded-lg p-3 mt-5"
+            >
+              WhatsApp पर Challenge Share करें
+            </button>
+          </div>
+
+          <h3 className="text-xl font-bold mb-3">प्रश्नों की जाँच</h3>
+
+          {testQuestions.map((q, index) => (
+            <div key={q.id} className="border rounded-lg p-3 mb-3">
+              <b>{index + 1}. {q.question}</b>
+
+              <p className="mt-2">
+                आपका जवाब:{" "}
+                {answers[q.id] === undefined
+                  ? "नहीं दिया"
+                  : q.options[answers[q.id]]}
+              </p>
+
+              <p className="text-green-700">
+                सही जवाब: {q.options[q.correct]}
+              </p>
+
+              <p className="mt-2 text-gray-600">
+                {q.explanation}
+              </p>
+            </div>
+          ))}
+
+          <button
+            onClick={() => setPage("home")}
+            className="w-full bg-blue-600 text-white rounded-lg p-3 mt-3"
+          >
+            Home पर जाएँ
+          </button>
+        </>
+      );
+    })()}
+  </div>
+)}
       {page === "adminLogin" && (
         <section className="max-w-md mx-auto px-4 py-12">
           <div className="bg-white border rounded-2xl p-7 shadow-sm">
@@ -787,7 +1127,12 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
   >
     वेबसाइट देखें
   </button>
-
+<button
+  onClick={() => window.location.href = "/support-admin"}
+  className="bg-purple-700 text-white px-5 py-3 rounded-lg"
+>
+  📩 Support Queries
+</button>
   <button
     onClick={logoutAdmin}
     className="bg-red-600 text-white px-5 py-3 rounded-lg"
@@ -823,6 +1168,111 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
               Excel Bulk Upload
             </button>
           </div>
+
+<div className="bg-white border rounded-xl p-5 mb-6">
+  <h3 className="text-xl font-bold mb-4">
+    🔔 Notification भेजें
+  </h3>
+
+  <input
+    value={adminNotificationTitle}
+    onChange={(e) => setAdminNotificationTitle(e.target.value)}
+    placeholder="Notification का Title"
+    className="w-full border rounded-lg p-3 mb-3"
+  />
+
+  <textarea
+    value={adminNotificationMessage}
+    onChange={(e) => setAdminNotificationMessage(e.target.value)}
+    placeholder="Notification का Message लिखें"
+    className="w-full border rounded-lg p-3 mb-3"
+    rows={4}
+  />
+
+  <label className="block font-semibold mb-2">
+    किसको भेजना है?
+  </label>
+
+  <select
+    value={adminNotificationAudience}
+    onChange={(e) => setAdminNotificationAudience(e.target.value)}
+    className="w-full border rounded-lg p-3 mb-3"
+  >
+    <option value="public">सभी लोगों को</option>
+    <option value="students">सभी Students को</option>
+    <option value="student">किसी एक Student को</option>
+  </select>
+
+  {adminNotificationAudience === "student" && (
+    <select
+      value={adminNotificationStudentId}
+      onChange={(e) => setAdminNotificationStudentId(e.target.value)}
+      className="w-full border rounded-lg p-3 mb-3"
+    >
+      <option value="">Student चुनें</option>
+      {adminNotificationStudents.map((student) => (
+        <option key={student.id} value={student.id}>
+          {student.name || "Student"} - {student.username || student.student_id || student.id}
+        </option>
+      ))}
+    </select>
+  )}
+
+  <button
+    disabled={adminNotificationLoading}
+    onClick={async () => {
+      if (!adminNotificationTitle.trim() || !adminNotificationMessage.trim()) {
+        alert("Title और Message दोनों लिखें।");
+        return;
+      }
+
+      if (
+        adminNotificationAudience === "student" &&
+        !adminNotificationStudentId
+      ) {
+        alert("पहले Student चुनें।");
+        return;
+      }
+
+      setAdminNotificationLoading(true);
+
+      const { error } = await supabase
+        .from("notifications")
+        .insert({
+          title: adminNotificationTitle.trim(),
+          message: adminNotificationMessage.trim(),
+          audience: adminNotificationAudience,
+          student_id:
+            adminNotificationAudience === "student"
+              ? adminNotificationStudentId
+              : null,
+        });
+
+      setAdminNotificationLoading(false);
+
+      if (error) {
+        alert("Notification नहीं भेजा गया: " + error.message);
+        return;
+      }
+
+      alert("Notification सफलतापूर्वक भेज दिया गया!");
+
+      setAdminNotificationTitle("");
+      setAdminNotificationMessage("");
+      setAdminNotificationStudentId("");
+
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      setNotifications(data || []);
+    }}
+    className="w-full bg-blue-950 text-white p-3 rounded-lg font-bold disabled:opacity-50"
+  >
+    {adminNotificationLoading ? "भेजा जा रहा है..." : "Notification भेजें"}
+  </button>
+</div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white border rounded-xl p-5">
@@ -865,37 +1315,64 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
               >
                 <option value="">विषय चुनें</option>
                 {subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
-              </select>
+             </select>
 
-              <input
-                value={newTopic}
-                onChange={(e) => setNewTopic(e.target.value)}
-                placeholder="नया टॉपिक लिखें"
-                className="w-full border rounded-lg p-3 mb-3"
-              />
-              <button onClick={addTopic} className="w-full bg-blue-950 text-white p-3 rounded-lg font-bold">
-                + टॉपिक जोड़ें
-              </button>
+<input
+  value={newTopic}
+  onChange={(e) => setNewTopic(e.target.value)}
+  placeholder="नया टॉपिक लिखें"
+  className="w-full border rounded-lg p-3 mb-3"
+/>
 
-              <h3 className="font-bold mt-7 mb-3">टॉपिक की सूची</h3>
-              {!selectedSubject ? (
-                <p className="text-slate-500">पहले विषय चुनें।</p>
-              ) : (
-                <div className="space-y-2">
-                  {(topics[selectedSubject] || []).map((topic) => (
-                    <div key={topic} className="border rounded-lg p-3 flex justify-between items-center gap-2">
-                      <span className="font-medium">{topic}</span>
-                      <div className="flex gap-3">
-                        <button onClick={() => editTopic(topic)} className="text-blue-700 text-sm font-semibold">बदलें</button>
-                        <button onClick={() => deleteTopic(topic)} className="text-red-600 text-sm font-semibold">हटाएँ</button>
-                      </div>
-                    </div>
-                  ))}
-                  {(topics[selectedSubject] || []).length === 0 && (
-                    <p className="text-slate-500">अभी कोई टॉपिक नहीं है।</p>
-                  )}
-                </div>
-              )}
+<input
+  type="number"
+  min="1"
+  value={newTopicTime}
+  onChange={(e) => setNewTopicTime(Number(e.target.value))}
+  placeholder="टेस्ट का समय (मिनट)"
+  className="w-full border rounded-lg p-3 mb-3"
+/>
+
+<button onClick={addTopic} className="w-full bg-blue-950 text-white p-3 rounded-lg font-bold">
+  + टॉपिक जोड़ें
+</button>
+
+<h3 className="font-bold mt-7 mb-3">टॉपिक की सूची</h3>
+
+{!selectedSubject ? (
+  <p className="text-slate-500">पहले विषय चुनें।</p>
+) : (
+  <div className="space-y-2">
+    {(topics[selectedSubject] || []).map((topic) => {
+      const key = `${selectedSubject}::${topic}`;
+
+      return (
+        <div key={topic} className="border rounded-lg p-3 flex flex-wrap justify-between items-center gap-2">
+          <span className="font-medium">{topic}</span>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="1"
+              value={topicTimes[key] ?? 30}
+              onChange={(e) =>
+                setTopicTimes({
+                  ...topicTimes,
+                  [key]: Number(e.target.value),
+                })
+              }
+              className="w-20 border rounded p-2"
+            />
+            <span className="text-sm">मिनट</span>
+
+            <button onClick={() => editTopic(topic)} className="text-blue-700 text-sm font-semibold">बदलें</button>
+            <button onClick={() => deleteTopic(topic)} className="text-red-600 text-sm font-semibold">हटाएँ</button>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
             </div>
           </div>
         </section>
@@ -1241,11 +1718,12 @@ if (data.session) {
             }
 
             if (data.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-              setAdminLoggedIn(true);
-              setPage("admin");
-            } else {
-            setLoginOpen(false);
-            }
+  setAdminLoggedIn(true);
+  setLoginOpen(false);
+  setPage("admin");
+} else {
+  startTest(selectedTopic);
+}
           }}
           className="w-full bg-green-700 text-white rounded-lg p-3 font-bold"
         >
