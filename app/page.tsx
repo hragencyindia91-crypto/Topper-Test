@@ -396,93 +396,104 @@ useEffect(() => {
     setQuestions(questions.filter((q) => q.id !== id));
   }
 
-  function downloadExcelTemplate() {
-    const worksheet = XLSX.utils.aoa_to_sheet([
-      ["विषय", "टॉपिक", "प्रश्न", "विकल्प 1", "विकल्प 2", "विकल्प 3", "विकल्प 4", "सही उत्तर", "व्याख्या"],
-    ]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "प्रश्न");
-    XLSX.writeFile(workbook, "TOPPER_TEST_प्रश्न_टेम्पलेट.xlsx");
+  
+function downloadExcelTemplate() {
+  const worksheet = XLSX.utils.aoa_to_sheet([
+    ["प्रश्न", "विकल्प A", "विकल्प B", "विकल्प C", "विकल्प D", "सही उत्तर", "व्याख्या"],
+  ]);
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "प्रश्न");
+  XLSX.writeFile(workbook, "TOPPER_TEST_प्रश्न_टेम्पलेट.xlsx");
+}
+
+async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  if (!selectedSubject || !selectedTopic) {
+    alert("पहले Subject और Topic चुनें।");
+    e.target.value = "";
+    return;
   }
 
-  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    try {
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    if (!sheet) {
+      alert("Excel में कोई शीट नहीं मिली।");
+      return;
+    }
 
-      if (!sheet) {
-        alert("Excel फाइल में कोई शीट नहीं मिली।");
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+      defval: "",
+    });
+
+    const imported: Question[] = [];
+    const errors: string[] = [];
+
+    const answerMap: Record<string, number> = {
+      A: 0, B: 1, C: 2, D: 3,
+      "1": 0, "2": 1, "3": 2, "4": 3,
+    };
+
+    rows.forEach((row, index) => {
+      const question = String(row["प्रश्न"] ?? "").trim();
+
+      const options = [
+        String(row["विकल्प A"] ?? row["विकल्प 1"] ?? "").trim(),
+        String(row["विकल्प B"] ?? row["विकल्प 2"] ?? "").trim(),
+        String(row["विकल्प C"] ?? row["विकल्प 3"] ?? "").trim(),
+        String(row["विकल्प D"] ?? row["विकल्प 4"] ?? "").trim(),
+      ];
+
+      const answerText = String(row["सही उत्तर"] ?? "").trim().toUpperCase();
+      const explanation = String(row["व्याख्या"] ?? "").trim();
+
+      if (!question && options.every((o) => !o) && !explanation) return;
+
+      if (!question || options.some((o) => !o) || !explanation) {
+        errors.push(`पंक्ति ${index + 2}: प्रश्न, चारों विकल्प और व्याख्या भरें`);
         return;
       }
 
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-      const imported: Question[] = [];
-      const errors: string[] = [];
+      const correctAnswer = answerMap[answerText];
 
-      rows.forEach((row, index) => {
-        const subject = String(row["विषय"] ?? "").trim();
-        const topic = String(row["टॉपिक"] ?? "").trim();
-        const question = String(row["प्रश्न"] ?? "").trim();
-        const options = [
-          String(row["विकल्प 1"] ?? "").trim(),
-          String(row["विकल्प 2"] ?? "").trim(),
-          String(row["विकल्प 3"] ?? "").trim(),
-          String(row["विकल्प 4"] ?? "").trim(),
-        ];
-        const answerText = String(row["सही उत्तर"] ?? "").trim();
-        const answerMatch = answerText.match(/[1-4]/);
-        const answer = answerMatch ? Number(answerMatch[0]) : 0;
-        const explanation = String(row["व्याख्या"] ?? "").trim();
-
-        if (!subjects.includes(subject)) {
-          errors.push(`पंक्ति ${index + 2}: विषय "${subject}" मौजूद नहीं है`);
-          return;
-        }
-
-        if (!(topics[subject] || []).includes(topic)) {
-          errors.push(`पंक्ति ${index + 2}: टॉपिक "${topic}" मौजूद नहीं है`);
-          return;
-        }
-
-        if (!question || options.some((o) => !o) || !explanation) {
-          errors.push(`पंक्ति ${index + 2}: प्रश्न, चारों विकल्प और व्याख्या भरें`);
-          return;
-        }
-
-        if (![1, 2, 3, 4].includes(answer)) {
-          errors.push(`पंक्ति ${index + 2}: सही उत्तर में 1, 2, 3 या 4 लिखें`);
-          return;
-        }
-
-        imported.push({
-          id: Date.now() + index,
-          subject,
-          topic,
-          question,
-          options,
-          correct: answer - 1,
-          explanation,
-        });
-      });
-
-      if (imported.length) {
-        setQuestions((previous) => [...previous, ...imported]);
+      if (correctAnswer === undefined) {
+        errors.push(`पंक्ति ${index + 2}: सही उत्तर A/B/C/D या 1/2/3/4 होना चाहिए`);
+        return;
       }
 
-      alert(
-        `${imported.length} प्रश्न सफलतापूर्वक जोड़े गए।` +
-        (errors.length ? "\n\nगलत पंक्तियाँ:\n" + errors.slice(0, 8).join("\n") : "")
-      );
-    } catch {
-      alert("फाइल पढ़ने में समस्या आई। सही Excel या CSV फाइल चुनें।");
-    } finally {
-      e.target.value = "";
+      imported.push({
+        id: Date.now() + index,
+        subject: selectedSubject,
+        topic: selectedTopic,
+        question,
+        options,
+        correct: correctAnswer,
+        explanation,
+      });
+    });
+
+    if (imported.length > 0) {
+      setQuestions((previous) => [...previous, ...imported]);
     }
+
+    alert(
+      `${imported.length} प्रश्न सफलतापूर्वक जोड़े गए।` +
+      (errors.length
+        ? "\n\nगलत पंक्तियाँ:\n" + errors.slice(0, 8).join("\n")
+        : "")
+    );
+  } catch {
+    alert("फाइल पढ़ने में समस्या आई। सही Excel या CSV फाइल चुनें।");
+  } finally {
+    e.target.value = "";
   }
+}
+
 
   const filteredQuestions = questions.filter((q) =>
     (!filterSubject || q.subject === filterSubject) &&
@@ -1065,6 +1076,35 @@ useEffect(() => {
             </button>
 
             <h3 className="text-xl font-bold mb-3">2. भरी हुई Excel फाइल अपलोड करें</h3>
+
+<label className="block font-semibold mb-2">Subject चुनें</label>
+<select
+  value={selectedSubject}
+  onChange={(e) => {
+    setSelectedSubject(e.target.value);
+    setSelectedTopic("");
+  }}
+  className="w-full border rounded-lg p-3 mb-4"
+>
+  <option value="">Subject चुनें</option>
+  {subjects.map((subject) => (
+    <option key={subject} value={subject}>{subject}</option>
+  ))}
+</select>
+
+<label className="block font-semibold mb-2">Topic चुनें</label>
+<select
+  value={selectedTopic}
+  onChange={(e) => setSelectedTopic(e.target.value)}
+  className="w-full border rounded-lg p-3 mb-4"
+  disabled={!selectedSubject}
+>
+  <option value="">Topic चुनें</option>
+  {(topics[selectedSubject] || []).map((topic) => (
+    <option key={topic} value={topic}>{topic}</option>
+  ))}
+</select>
+
             <p className="text-slate-600 mb-4">
               सही उत्तर वाले कॉलम में 1, 2, 3 या 4 लिखें। विषय और टॉपिक वेबसाइट में पहले से मौजूद होने चाहिए।
             </p>
