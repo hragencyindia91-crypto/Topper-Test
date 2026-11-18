@@ -1494,9 +1494,9 @@ async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
     <option key={topic} value={topic}>{topic}</option>
   ))}
 </select>
-            <p className="text-slate-600 mb-4">
-              सही उत्तर वाले कॉलम में 1, 2, 3 या 4 लिखें। विषय और टॉपिक वेबसाइट में पहले से मौजूद होने चाहिए।
-            </p>
+           <p className="text-slate-600 mb-4">
+  पहले Subject और Topic चुनें। Excel में प्रश्न, विकल्प A, B, C, D, सही उत्तर और व्याख्या भरें। सही उत्तर A/B/C/D या 1/2/3/4 लिखें।
+</p>
             <input type="file" accept=".xlsx,.xls,.csv" onChange={importExcel} className="w-full border rounded-lg p-3" />
 
             <div className="mt-6 rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-sm text-slate-700">
