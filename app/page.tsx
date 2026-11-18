@@ -1738,11 +1738,28 @@ if (data.session) {
   </div>
 )}
 
-      <footer className="bg-slate-950 text-white text-center py-7 mt-12">
-        <h2 className="font-bold text-xl text-yellow-400">TOPPER TEST</h2>
-        <p className="text-slate-400 mt-2">Rajasthan Competitive Exam Practice Platform</p>
-        <p className="text-slate-500 text-sm mt-3">© 2026 TOPPER TEST. All Rights Reserved.</p>
-      </footer>
+      
+<footer className="bg-slate-950 text-white text-center py-8 mt-12">
+  <h2 className="font-bold text-xl text-yellow-400">TOPPER TEST</h2>
+
+  <p className="text-slate-400 mt-2">
+    Rajasthan Competitive Exam Practice Platform
+  </p>
+
+  <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 mt-6 px-4">
+    <a href="/about" className="text-slate-300 hover:text-yellow-400">About Us</a>
+    <a href="/contact" className="text-slate-300 hover:text-yellow-400">Contact Us</a>
+    <a href="/privacy-policy" className="text-slate-300 hover:text-yellow-400">Privacy Policy</a>
+    <a href="/disclaimer" className="text-slate-300 hover:text-yellow-400">Disclaimer</a>
+    <a href="/terms" className="text-slate-300 hover:text-yellow-400">Terms & Conditions</a>
+    <a href="/refund-policy" className="text-slate-300 hover:text-yellow-400">Refund Policy</a>
+  </div>
+
+  <p className="text-slate-500 text-sm mt-6">
+    © 2026 TOPPER TEST. All Rights Reserved.
+  </p>
+</footer>
+
     </main>
   );
 }
