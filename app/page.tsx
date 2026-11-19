@@ -728,14 +728,14 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
 
   <button
     onClick={() => setPage("home")}
- className={`${buttonClass} bg-blue-600`}
+className={`${buttonClass} bg-blue-600 hidden md:block`}
   >
     Home
   </button>
 
   <button
      onClick={openNotifications}
-className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base"
+className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base hidden md:block"
   >
     🔔
    {notifications.filter(
@@ -776,12 +776,9 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
     className={`${buttonClass} bg-slate-700 text-white`}
   >
     Login / Register
-  </button>
-)}
-
-          <button
+  <button
   onClick={() => setMobileMenuOpen(true)}
-  className="text-white text-3xl px-2"
+  className="md:hidden text-white text-3xl px-3 py-1"
   aria-label="Open Menu"
 >
   ☰
