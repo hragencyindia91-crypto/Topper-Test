@@ -780,15 +780,13 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
   </button>
 )}
 
-            {adminLoggedIn && (
-  <button
-    onClick={openAdmin}
-    className={`${buttonClass} bg-yellow-400 text-black`}
-  >
-    Admin Panel
-  </button>
-)}
-          </div>
+          <button
+  onClick={() => setMobileMenuOpen(true)}
+  className="md:hidden text-white text-3xl px-2"
+  aria-label="Open Menu"
+>
+  ☰
+</button>
         </div>
       </header>
       <button
