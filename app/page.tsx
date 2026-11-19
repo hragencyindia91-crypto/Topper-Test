@@ -724,19 +724,18 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
               Rajasthan Competitive Exam Practice
             </p>
           </button>
-
 <div className="flex flex-wrap gap-2 items-center">
 
   <button
     onClick={() => setPage("home")}
-    className={`${buttonClass} bg-blue-600`}
+ className={`${buttonClass} bg-blue-600`}
   >
     Home
   </button>
 
   <button
      onClick={openNotifications}
-   className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base"
+className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base hidden md:block"
   >
     🔔
    {notifications.filter(
