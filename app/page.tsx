@@ -64,7 +64,14 @@ type Question = {
 export default function Home() {
   const [subjects, setSubjects] = useState(defaultSubjects);
   const [topics, setTopics] = useState(defaultTopics);
-  const [questions, setQuestions] = useState<Question[]>([]);
+
+const [questions, setQuestions] = useState<Question[]>([]);
+
+useEffect(() => {
+  const loadTopicResults = async () => {
+    if (page !== "topics" || !studentProfile) return;
+
+    const {
       data: { user },
     } = await supabase.auth.getUser();
 
@@ -82,6 +89,7 @@ export default function Home() {
 
   loadTopicResults();
 }, [page, studentProfile]);
+
   const [savingResult, setSavingResult] = useState(false);
 const [currentQuestion, setCurrentQuestion] = useState(0);
 const [timeLeft, setTimeLeft] = useState(30 * 60);
