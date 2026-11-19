@@ -1739,26 +1739,38 @@ if (data.session) {
 )}
 
       
-<footer className="bg-slate-950 text-white text-center py-8 mt-12">
+
+<footer className="bg-slate-950 text-white text-center py-8 mt-12 w-full">
   <h2 className="font-bold text-xl text-yellow-400">TOPPER TEST</h2>
 
   <p className="text-slate-400 mt-2">
     Rajasthan Competitive Exam Practice Platform
   </p>
 
-<div className="flex flex-col items-center gap-3 mt-6 px-4">
-    <a href="/about" className="text-slate-300 hover:text-yellow-400">About Us</a>
-    <a href="/contact" className="text-slate-300 hover:text-yellow-400">Contact Us</a>
-    <a href="/privacy-policy" className="text-slate-300 hover:text-yellow-400">Privacy Policy</a>
-    <a href="/disclaimer" className="text-slate-300 hover:text-yellow-400">Disclaimer</a>
-    <a href="/terms" className="text-slate-300 hover:text-yellow-400">Terms & Conditions</a>
-    <a href="/refund-policy" className="text-slate-300 hover:text-yellow-400">Refund Policy</a>
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+      gap: "14px",
+      width: "100%",
+      maxWidth: "500px",
+      margin: "24px auto 0",
+      padding: "0 16px",
+    }}
+  >
+    <a href="/about" className="text-slate-300">About Us</a>
+    <a href="/contact" className="text-slate-300">Contact Us</a>
+    <a href="/privacy-policy" className="text-slate-300">Privacy Policy</a>
+    <a href="/disclaimer" className="text-slate-300">Disclaimer</a>
+    <a href="/terms" className="text-slate-300">Terms & Conditions</a>
+    <a href="/refund-policy" className="text-slate-300">Refund Policy</a>
   </div>
 
   <p className="text-slate-500 text-sm mt-6">
     © 2026 TOPPER TEST. All Rights Reserved.
   </p>
 </footer>
+
 
     </main>
   );
