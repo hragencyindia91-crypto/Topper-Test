@@ -735,6 +735,7 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
   </button>
 
   <button
+     onClick={openNotifications}
    className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base"
   >
     🔔
@@ -790,6 +791,74 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
           </div>
         </div>
       </header>
+      <button
+  onClick={() => setMobileMenuOpen(true)}
+  className="md:hidden text-white text-3xl px-2"
+  aria-label="Open Menu"
+>
+        {mobileMenuOpen && (
+  <div className="fixed inset-0 z-50 md:hidden">
+    <div
+      className="absolute inset-0 bg-black/50"
+      onClick={() => setMobileMenuOpen(false)}
+    />
+
+    <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl p-5">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-blue-950">
+          TOPPER TEST
+        </h2>
+        <button
+          onClick={() => setMobileMenuOpen(false)}
+          className="text-2xl"
+        >
+          ×
+        </button>
+      </div>
+
+      {[
+        ["Home", "home"],
+        ["Subjects", "home"],
+        ["Admin Panel", "admin"],
+      ].map(([name, target]) => (
+        <button
+          key={name}
+          onClick={() => {
+            setPage(target);
+            setMobileMenuOpen(false);
+          }}
+          className="block w-full text-left p-3 mb-2 rounded-lg hover:bg-blue-50 font-semibold"
+        >
+          {name}
+        </button>
+      ))}
+
+      <button
+        onClick={() => {
+          setMobileMenuOpen(false);
+          openNotifications();
+        }}
+        className="block w-full text-left p-3 mb-2 rounded-lg hover:bg-blue-50 font-semibold"
+      >
+        Notifications
+      </button>
+
+      {studentProfile && (
+        <button
+          onClick={() => {
+            logoutStudent();
+            setMobileMenuOpen(false);
+          }}
+          className="block w-full text-left p-3 text-red-600 font-semibold"
+        >
+          Logout
+        </button>
+      )}
+    </div>
+  </div>
+)}
+  ☰
+</button>
       {showNotifications && (
         <div className="max-w-7xl mx-auto px-5 py-4">
           <div className="bg-white border rounded-xl shadow-lg p-4">
@@ -821,9 +890,6 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
           </div>
         </div>
       )}
-
-      (
-        <></>
       {page === "home" && (
         <>
           <section className="bg-gradient-to-r from-blue-950 to-indigo-700 text-white py-10 md:py-16 px-4 sm:px-5">
@@ -1166,45 +1232,6 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
           </div>
         </section>
       )}
-
-{page === "adminLogin" && (
-  <div className="max-w-md mx-auto mt-12 bg-white shadow-xl rounded-2xl p-6">
-    <h2 className="text-2xl font-bold mb-5 text-center">
-      Admin Login
-    </h2>
-
-    <input
-      type="email"
-      placeholder="Admin Email"
-      value={adminEmail}
-      onChange={(e) => setAdminEmail(e.target.value)}
-      className="w-full border rounded-lg p-3 mb-3"
-    />
-
-    <input
-      type="password"
-      placeholder="Password"
-      value={adminPassword}
-      onChange={(e) => setAdminPassword(e.target.value)}
-      className="w-full border rounded-lg p-3 mb-4"
-    />
-
-    <button
-      onClick={loginAdmin}
-      className="w-full bg-blue-950 text-white rounded-lg p-3 font-bold"
-    >
-      Login as Admin
-    </button>
-
-    <button
-      onClick={() => setPage("home")}
-      className="w-full mt-3 text-slate-600"
-    >
-      वापस Home पर जाएँ
-    </button>
-  </div>
-)}
-
       {page === "admin" && adminLoggedIn && (
         <section className="max-w-6xl mx-auto px-4 py-8">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
