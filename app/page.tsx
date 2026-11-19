@@ -1746,7 +1746,7 @@ if (data.session) {
   <p className="text-slate-400 mt-2">
     Rajasthan Competitive Exam Practice Platform
   </p>
-
+<p style={{color:"red", fontSize:"20px"}}>TEST FOOTER LINKS</p>
   <div
     style={{
       display: "grid",
