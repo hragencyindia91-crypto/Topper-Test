@@ -1146,13 +1146,17 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
 }}
                 className="bg-white border rounded-xl p-5 text-left font-semibold hover:border-blue-500 shadow-sm"
               >
-            {myResults.some(
-  (result) =>
-    result.subject === selectedSubject &&
-    result.topic === topic
-)
-  ? "🔄 Retest"
-  : "🚀 Start Test"}s
+         <div>{topic}</div>
+
+<div className="mt-2 text-sm font-bold text-blue-700">
+  {myResults.some(
+    (result) =>
+      result.subject === selectedSubject &&
+      result.topic === topic
+  )
+    ? "🔄 Retest"
+    : "🚀 Start Test"}
+</div>
               </button>
             ))}
           </div>
