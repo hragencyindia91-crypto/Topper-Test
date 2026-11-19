@@ -86,7 +86,7 @@ const [currentQuestion, setCurrentQuestion] = useState(0);
 const [answers, setAnswers] = useState<{ [key: number]: number }>({});
 const [reviewQuestions, setReviewQuestions] = useState<number[]>([]);
 const [timeLeft, setTimeLeft] = useState(60 * 60);
-const [testSubmitted, setTestSubmitted] = useState(false);
+const [testSubmitted, setTestSubmitted] = useState(false);ss
       if (savedSubjects) setSubjects(JSON.parse(savedSubjects));
       if (savedTopics) setTopics(JSON.parse(savedTopics));
       if (savedQuestions) setQuestions(JSON.parse(savedQuestions));

@@ -1850,7 +1850,7 @@ if (data.session) {
   </div>
 
   <p className="text-slate-500 text-sm mt-6">
-    © 2026 TOPPER TEST. All Rights Reserved.
+    © 2030 TOPPER TEST. All Rights Reserved.
   </p>
 </footer>
 
