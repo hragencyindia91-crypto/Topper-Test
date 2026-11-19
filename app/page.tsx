@@ -111,6 +111,28 @@ const [adminNotificationLoading, setAdminNotificationLoading] = useState(false);
 const [answers, setAnswers] = useState<Record<number, number>>({});
   const [myResults, setMyResults] = useState<any[]>([]);
 const [resultsLoading, setResultsLoading] = useState(false);
+useEffect(() => {
+  const loadTopicResults = async () => {
+    if (page !== "topics" || !studentProfile) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("test_results")
+      .select("subject, topic")
+      .eq("user_id", user.id);
+
+    if (!error) {
+      setMyResults(data || []);
+    }
+  };
+
+  loadTopicResults();
+}, [page, studentProfile]);
   const [savingResult, setSavingResult] = useState(false);
 const [currentQuestion, setCurrentQuestion] = useState(0);
 const [timeLeft, setTimeLeft] = useState(30 * 60);
@@ -1124,7 +1146,13 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
 }}
                 className="bg-white border rounded-xl p-5 text-left font-semibold hover:border-blue-500 shadow-sm"
               >
-                {topic} →
+            {myResults.some(
+  (result) =>
+    result.subject === selectedSubject &&
+    result.topic === topic
+)
+  ? "🔄 Retest"
+  : "🚀 Start Test"}s
               </button>
             ))}
           </div>
@@ -1389,6 +1417,17 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
             <button onClick={loginAdmin} className="w-full bg-blue-950 text-white p-3 rounded-lg font-bold">
               Login
             </button>
+            <button
+  onClick={() => {
+    setAnswers({});
+    setCurrentQuestion(0);
+    setTimeLeft(30 * 60);
+    setPage("test");
+  }}
+  className="w-full mb-3 bg-green-600 text-white py-3 rounded-lg font-bold"
+>
+  🔄 Retest दें
+</button>
             <button onClick={() => setPage("home")} className="w-full mt-3 p-2 text-slate-600">
               ← Home
             </button>
