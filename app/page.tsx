@@ -68,6 +68,7 @@ const [page, setPage] = useState("home");
 const [selectedTopic, setSelectedTopic] = useState("");
 const [loginOpen, setLoginOpen] = useState(false);
 const [studentMode, setStudentMode] = useState<"login" | "signup">("login");
+  const [selectedSubject, setSelectedSubject] = useState("");
 const [questions, setQuestions] = useState<Question[]>([]);
 
 useEffect(() => {
