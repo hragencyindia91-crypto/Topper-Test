@@ -1196,7 +1196,7 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
       ) : (
         <button
           className="bg-green-600 text-white rounded-lg p-3"
-          onClick={submitTest}
+     onClick={() => submitTest()}
         >
           Submit Test
         </button>
