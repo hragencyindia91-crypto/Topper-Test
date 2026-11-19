@@ -749,15 +749,15 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
 )}
   </button>
 
-  {studentProfile ? (
+ {studentProfile ? (
   <div className="bg-slate-800 rounded-xl p-2 sm:p-3 text-xs sm:text-sm text-white">
     <p className="font-bold text-yellow-400">
       {studentProfile.name || "Student"}
     </p>
     <p>Username: {studentProfile.username || "Not set"}</p>
-   <p className="text-slate-300">
-  Student ID: {studentProfile.student_id}
-</p>
+    <p className="text-slate-300">
+      Student ID: {studentProfile.student_id}
+    </p>
     <button
       onClick={async () => {
         await supabase.auth.signOut();
@@ -773,20 +773,22 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
 ) : (
   <button
     onClick={() => setLoginOpen(true)}
-    className={`${buttonClass} bg-slate-700 text-white`}
+    className={`${buttonClass} bg-slate-700 text-white hidden md:block`}
   >
     Login / Register
-  <button
+  </button>
+)}
+
+<button
   onClick={() => setMobileMenuOpen(true)}
   className="md:hidden text-white text-3xl px-3 py-1"
   aria-label="Open Menu"
 >
   ☰
 </button>
-        </div>
-        </div>
-   </header>
-
+      </div>
+    </div>
+  </header>
 {mobileMenuOpen && (
   <div className="fixed inset-0 z-50 md:hidden">
     <div
