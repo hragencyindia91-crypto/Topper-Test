@@ -846,13 +846,7 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
       {studentProfile && (
         <button
           onClick={() => {
-            logoutStudent();
-            setMobileMenuOpen(false);
-          }}
-          className="block w-full text-left p-3 text-red-600 font-semibold"
-        >
-          Logout
-        </button>
+           
       )}
     </div>
   </div>
