@@ -109,6 +109,9 @@ const [adminNotificationLoading, setAdminNotificationLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [testQuestions, setTestQuestions] = useState<Question[]>([]);
 const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [myResults, setMyResults] = useState<any[]>([]);
+const [resultsLoading, setResultsLoading] = useState(false);
+  const [savingResult, setSavingResult] = useState(false);
 const [currentQuestion, setCurrentQuestion] = useState(0);
 const [timeLeft, setTimeLeft] = useState(30 * 60);
 const [newTopicTime, setNewTopicTime] = useState(30);
@@ -133,12 +136,97 @@ const startTest = (topic: string) => {
   setPage("test");
 };
 
-const submitTest = () => {
-  if (window.confirm("क्या आप टेस्ट Submit करना चाहते हैं?")) {
+const submitTest = async (autoSubmit = false) => {
+  if (!autoSubmit && !window.confirm("क्या आप टेस्ट Submit करना चाहते हैं?")) {
+    return;
+  }
+
+  if (savingResult) return;
+
+  setSavingResult(true);
+
+  try {
+    const { data: { user }, error: userError } =
+      await supabase.auth.getUser();
+
+    if (userError || !user) {
+      alert("रिजल्ट सेव करने के लिए पहले Student Login करें।");
+      setSavingResult(false);
+      return;
+    }
+
+    const correct = testQuestions.filter(
+      (q) => answers[q.id] === q.correct
+    ).length;
+
+    const wrong = testQuestions.filter(
+      (q) =>
+        answers[q.id] !== undefined &&
+        answers[q.id] !== q.correct
+    ).length;
+
+    const skipped = testQuestions.length - correct - wrong;
+
+    const score = testQuestions.length
+      ? Math.round((correct / testQuestions.length) * 100)
+      : 0;
+
+    const { error } = await supabase
+      .from("test_results")
+      .insert({
+        user_id: user.id,
+        subject: selectedSubject,
+        topic: selectedTopic,
+        total_questions: testQuestions.length,
+        correct,
+        wrong,
+        skipped,
+        score,
+        questions: testQuestions,
+        answers,
+      });
+
+    if (error) throw error;
+
     setPage("result");
+
+  } catch (error: any) {
+    alert("रिजल्ट सेव नहीं हुआ: " + error.message);
+  } finally {
+    setSavingResult(false);
   }
 };
+  const loadMyResults = async () => {
+  setResultsLoading(true);
 
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      alert("पहले Student Login करें।");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("test_results")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    setMyResults(data || []);
+    setPage("myResults");
+    setMobileMenuOpen(false);
+  } catch (error: any) {
+    alert("रिजल्ट लोड नहीं हुए: " + error.message);
+  } finally {
+    setResultsLoading(false);
+  }
+};
 const shareChallenge = () => {
   const correct = testQuestions.filter(
     (q) => answers[q.id] === q.correct
@@ -298,11 +386,11 @@ useEffect(() => {
     }
     setLoaded(true);
   }, []);
-  useEffect(() => {
+useEffect(() => {
   if (page !== "test") return;
 
   if (timeLeft <= 0) {
-    setPage("result");
+    submitTest(true);
     return;
   }
 
@@ -831,7 +919,15 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
 >
   Subjects
 </button>
-
+{studentProfile && (
+  <button
+    onClick={loadMyResults}
+    disabled={resultsLoading}
+    className="w-full text-left px-4 py-3 rounded-lg bg-blue-50 text-blue-950 font-semibold mb-2"
+  >
+    {resultsLoading ? "Loading..." : "📊 My Results"}
+  </button>
+)}
 {adminLoggedIn && (
   <button
     onClick={() => {
@@ -1195,6 +1291,75 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
         </>
       );
     })()}
+  </div>
+)}
+      {page === "myResults" && (
+  <div className="max-w-4xl mx-auto p-4">
+    <h2 className="text-2xl font-bold text-center mb-6">
+      📊 मेरे सभी टेस्ट रिजल्ट
+    </h2>
+
+    {resultsLoading ? (
+      <p className="text-center py-8">रिजल्ट लोड हो रहे हैं...</p>
+    ) : myResults.length === 0 ? (
+      <p className="text-center py-8 text-gray-500">
+        अभी तक आपने कोई टेस्ट नहीं दिया है।
+      </p>
+    ) : (
+      <div className="space-y-4">
+        {myResults.map((result) => (
+          <div
+            key={result.id}
+            className="border rounded-xl p-4 shadow-sm bg-white"
+          >
+            <div className="flex justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="font-bold text-lg text-blue-950">
+                  {result.subject || "विषय"}
+                </h3>
+                <p className="text-gray-600">{result.topic || "टॉपिक"}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {new Date(result.created_at).toLocaleString("en-IN")}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-2xl font-bold text-green-600">
+                  {result.score}%
+                </p>
+                <p className="text-sm text-gray-500">स्कोर</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 mt-4 text-center">
+              <div className="bg-slate-100 rounded-lg p-2">
+                <b>{result.total_questions}</b>
+                <p className="text-xs">कुल प्रश्न</p>
+              </div>
+              <div className="bg-green-100 rounded-lg p-2">
+                <b>{result.correct}</b>
+                <p className="text-xs">सही</p>
+              </div>
+              <div className="bg-red-100 rounded-lg p-2">
+                <b>{result.wrong}</b>
+                <p className="text-xs">गलत</p>
+              </div>
+              <div className="bg-gray-100 rounded-lg p-2">
+                <b>{result.skipped}</b>
+                <p className="text-xs">छोड़े</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+
+    <button
+      onClick={() => setPage("home")}
+      className="w-full mt-6 bg-blue-700 text-white py-3 rounded-lg font-bold"
+    >
+      Home पर जाएँ
+    </button>
   </div>
 )}
       {page === "adminLogin" && (
