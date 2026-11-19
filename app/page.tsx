@@ -127,6 +127,29 @@ export default function Home() {
   }, [page, studentProfile]);
 
   // यहीं startTest, submitTest और shareChallenge के functions शुरू होंगे।
+  useEffect(() => {
+  const saved = localStorage.getItem("topper_read_notifications");
+  if (saved) {
+    setReadNotificationIds(JSON.parse(saved));
+  }
+}, []);
+
+const openNotifications = () => {
+  setShowNotifications(true);
+
+  const ids = notifications.map((item) => String(item.id));
+
+  setReadNotificationIds((previous) => {
+    const updated = Array.from(new Set([...previous, ...ids]));
+
+    localStorage.setItem(
+      "topper_read_notifications",
+      JSON.stringify(updated)
+    );
+
+    return updated;
+  });
+};
   const startTest = (topic: string) => {
 
   const matching = questions.filter(
