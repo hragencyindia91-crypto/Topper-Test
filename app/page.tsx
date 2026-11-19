@@ -796,6 +796,8 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
   className="md:hidden text-white text-3xl px-2"
   aria-label="Open Menu"
 >
+         ☰
+</button>
         {mobileMenuOpen && (
   <div className="fixed inset-0 z-50 md:hidden">
     <div
@@ -816,23 +818,40 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
         </button>
       </div>
 
-      {[
-        ["Home", "home"],
-        ["Subjects", "home"],
-        ["Admin Panel", "admin"],
-      ].map(([name, target]) => (
-        <button
-          key={name}
-          onClick={() => {
-            setPage(target);
-            setMobileMenuOpen(false);
-          }}
-          className="block w-full text-left p-3 mb-2 rounded-lg hover:bg-blue-50 font-semibold"
-        >
-          {name}
-        </button>
-      ))}
+     <button
+  onClick={() => {
+    setPage("home");
+    setMobileMenuOpen(false);
+  }}
+  className="block w-full text-left p-3 mb-2 rounded-lg hover:bg-blue-50 font-semibold"
+>
+  Home
+</button>
 
+<button
+  onClick={() => {
+    setPage("home");
+    setMobileMenuOpen(false);
+    setTimeout(() => {
+      document.getElementById("subjects")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  }}
+  className="block w-full text-left p-3 mb-2 rounded-lg hover:bg-blue-50 font-semibold"
+>
+  Subjects
+</button>
+
+{adminLoggedIn && (
+  <button
+    onClick={() => {
+      setPage("admin");
+      setMobileMenuOpen(false);
+    }}
+    className="block w-full text-left p-3 mb-2 rounded-lg hover:bg-blue-50 font-semibold"
+  >
+    Admin Panel
+  </button>
+)}
       <button
         onClick={() => {
           setMobileMenuOpen(false);
@@ -846,8 +865,7 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
     </div>
   </div>
 )}
-  ☰
-</button>
+      
       {showNotifications && (
         <div className="max-w-7xl mx-auto px-5 py-4">
           <div className="bg-white border rounded-xl shadow-lg p-4">
