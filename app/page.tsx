@@ -782,7 +782,7 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
 
           <button
   onClick={() => setMobileMenuOpen(true)}
-  className="md:hidden text-white text-3xl px-2"
+  className="text-white text-3xl px-2"
   aria-label="Open Menu"
 >
   ☰
