@@ -725,7 +725,7 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
             </p>
           </button>
 
-<div className="flex flex-wrap gap-2">
+<div className="flex flex-wrap gap-2 items-center">
 
   <button
     onClick={() => setPage("home")}
