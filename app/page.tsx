@@ -788,15 +788,9 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
   ☰
 </button>
         </div>
-      </header>
-      <button
-  onClick={() => setMobileMenuOpen(true)}
-  className="md:hidden text-white text-3xl px-2"
-  aria-label="Open Menu"
->
-         ☰
-</button>
-        {mobileMenuOpen && (
+   </header>
+
+{mobileMenuOpen && (
   <div className="fixed inset-0 z-50 md:hidden">
     <div
       className="absolute inset-0 bg-black/50"
