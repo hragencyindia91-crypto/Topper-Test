@@ -69,6 +69,7 @@ export default function Home() {
   const [loaded, setLoaded] = useState(false);
 const [notifications, setNotifications] = useState<any[]>([]);
 const [showNotifications, setShowNotifications] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
 
 useEffect(() => {
