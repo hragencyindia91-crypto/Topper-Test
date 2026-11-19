@@ -61,46 +61,74 @@ type Question = {
   explanation: string;
 };
 
+
 export default function Home() {
+  const [loaded, setLoaded] = useState(false);
+
   const [subjects, setSubjects] = useState(defaultSubjects);
   const [topics, setTopics] = useState(defaultTopics);
-const [page, setPage] = useState("home");
-const [selectedTopic, setSelectedTopic] = useState("");
-const [loginOpen, setLoginOpen] = useState(false);
-const [studentMode, setStudentMode] = useState<"login" | "signup">("login");
+  const [questions, setQuestions] = useState<Question[]>([]);
+
+  const [page, setPage] = useState("home");
   const [selectedSubject, setSelectedSubject] = useState("");
-const [questions, setQuestions] = useState<Question[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState("");
 
-useEffect(() => {
-  const loadTopicResults = async () => {
-    if (page !== "topics" || !studentProfile) return;
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [studentMode, setStudentMode] = useState<"login" | "signup">("login");
+  const [studentProfile, setStudentProfile] = useState<any>(null);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("test_results")
-      .select("subject, topic")
-      .eq("user_id", user.id);
-
-    if (!error) {
-      setMyResults(data || []);
-    }
-  };
-
-  loadTopicResults();
-}, [page, studentProfile]);
-
+  const [search, setSearch] = useState("");
+  const [testQuestions, setTestQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [myResults, setMyResults] = useState<any[]>([]);
+  const [resultsLoading, setResultsLoading] = useState(false);
   const [savingResult, setSavingResult] = useState(false);
-const [currentQuestion, setCurrentQuestion] = useState(0);
-const [timeLeft, setTimeLeft] = useState(30 * 60);
-const [newTopicTime, setNewTopicTime] = useState(30);
-const [topicTimes, setTopicTimes] = useState<Record<string, number>>({});
-// यहीं startTest, submitTest और shareChallenge के तीनों functions रखो।
-const startTest = (topic: string) => {
+
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(30 * 60);
+
+  const [newTopicTime, setNewTopicTime] = useState(30);
+  const [topicTimes, setTopicTimes] = useState<Record<string, number>>({});
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
+
+  const [adminNotificationTitle, setAdminNotificationTitle] = useState("");
+  const [adminNotificationMessage, setAdminNotificationMessage] = useState("");
+  const [adminNotificationAudience, setAdminNotificationAudience] = useState("public");
+  const [adminNotificationStudentId, setAdminNotificationStudentId] = useState("");
+  const [adminNotificationStudents, setAdminNotificationStudents] = useState<any[]>([]);
+  const [adminNotificationLoading, setAdminNotificationLoading] = useState(false);
+
+  useEffect(() => {
+    const loadTopicResults = async () => {
+      if (page !== "topics" || !studentProfile) return;
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("test_results")
+        .select("subject, topic")
+        .eq("user_id", user.id);
+
+      if (!error) {
+        setMyResults(data || []);
+      }
+    };
+
+    loadTopicResults();
+  }, [page, studentProfile]);
+
+  // यहीं startTest, submitTest और shareChallenge के functions शुरू होंगे।
+  const startTest = (topic: string) => {
+
   const matching = questions.filter(
     (q) => q.subject === selectedSubject && q.topic === topic
   );
