@@ -38,20 +38,19 @@ const subjectIcons: Record<string, string> = {
 };
 
 const defaultTopics: Record<string, string[]> = {
-  "राजस्थान इतिहास": ["प्राचीन इतिहास", "मध्यकालीन इतिहास", "आधुनिक इतिहास"],
-  "राजस्थान भूगोल": ["भौतिक स्वरूप", "नदियाँ", "जलवायु"],
-  "राजस्थान कला एवं संस्कृति": ["लोक देवता", "लोक नृत्य", "मेले एवं त्योहार"],
-  "राजस्थान राजव्यवस्था": ["राज्यपाल", "मुख्यमंत्री", "विधानसभा"],
-  "राजस्थान अर्थव्यवस्था": ["कृषि", "उद्योग", "बजट"],
-  "राजस्थान सामान्य ज्ञान": ["प्रमुख तथ्य", "जिले", "प्रमुख संस्थान"],
-  "हिंदी": ["संधि", "समास", "व्याकरण"],
-  "गणित": ["प्रतिशत", "लाभ एवं हानि", "औसत"],
-  "कंप्यूटर": ["कंप्यूटर परिचय", "हार्डवेयर", "सॉफ्टवेयर"],
-  "सामान्य विज्ञान": ["भौतिक विज्ञान", "रसायन विज्ञान", "जीव विज्ञान"],
-  "रीजनिंग": ["श्रृंखला", "कोडिंग", "दिशा ज्ञान"],
-  "करंट अफेयर्स": ["राष्ट्रीय", "अंतरराष्ट्रीय", "राजस्थान"],
+  "राजस्थान इतिहास": [],
+  "राजस्थान भूगोल": [],
+  "राजस्थान कला एवं संस्कृति": [],
+  "राजस्थान राजव्यवस्था": [],
+  "राजस्थान अर्थव्यवस्था": [],
+  "भारत का इतिहास": [],
+  "भारत का भूगोल": [],
+  "भारतीय राजव्यवस्था": [],
+  "सामान्य विज्ञान": [],
+  "कंप्यूटर": [],
+  "रीजनिंग": [],
+  "करंट अफेयर्स": [],
 };
-
 type Question = {
   id: number;
   subject: string;
@@ -66,56 +65,7 @@ export default function Home() {
   const [subjects, setSubjects] = useState(defaultSubjects);
   const [topics, setTopics] = useState(defaultTopics);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [loaded, setLoaded] = useState(false);
-const [notifications, setNotifications] = useState<any[]>([]);
-const [showNotifications, setShowNotifications] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
-
-useEffect(() => {
-  const saved = localStorage.getItem("topper_read_notifications");
-  if (saved) {
-    setReadNotificationIds(JSON.parse(saved));
-  }
-}, []);
-const openNotifications = () => {
-  setShowNotifications(true);
-
-  const ids = notifications.map((item) => String(item.id));
-
-  setReadNotificationIds((previous) => {
-    const updated = Array.from(new Set([...previous, ...ids]));
-
-    localStorage.setItem(
-      "topper_read_notifications",
-      JSON.stringify(updated)
-    );
-
-    return updated;
-  });
-};
-const [adminNotificationTitle, setAdminNotificationTitle] = useState("");
-const [adminNotificationMessage, setAdminNotificationMessage] = useState("");
-const [adminNotificationAudience, setAdminNotificationAudience] = useState("public");
-const [adminNotificationStudentId, setAdminNotificationStudentId] = useState("");
-const [adminNotificationStudents, setAdminNotificationStudents] = useState<any[]>([]);
-const [adminNotificationLoading, setAdminNotificationLoading] = useState(false);
-  const [page, setPage] = useState("home");
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [selectedTopic, setSelectedTopic] = useState("");
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [studentMode, setStudentMode] = useState<"login" | "signup">("login");
-  const [studentProfile, setStudentProfile] = useState<any>(null);
-  const [search, setSearch] = useState("");
-  const [testQuestions, setTestQuestions] = useState<Question[]>([]);
-const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [myResults, setMyResults] = useState<any[]>([]);
-const [resultsLoading, setResultsLoading] = useState(false);
-useEffect(() => {
-  const loadTopicResults = async () => {
-    if (page !== "topics" || !studentProfile) return;
-
-    const {
+c
       data: { user },
     } = await supabase.auth.getUser();
 
