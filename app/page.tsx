@@ -735,7 +735,7 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
 
   <button
      onClick={openNotifications}
-className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base hidden md:block"
+className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base"
   >
     🔔
    {notifications.filter(
