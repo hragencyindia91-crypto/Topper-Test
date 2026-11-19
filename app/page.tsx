@@ -65,7 +65,6 @@ export default function Home() {
   const [subjects, setSubjects] = useState(defaultSubjects);
   const [topics, setTopics] = useState(defaultTopics);
   const [questions, setQuestions] = useState<Question[]>([]);
-c
       data: { user },
     } = await supabase.auth.getUser();
 
