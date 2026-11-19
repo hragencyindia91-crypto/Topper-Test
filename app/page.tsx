@@ -69,6 +69,30 @@ export default function Home() {
   const [loaded, setLoaded] = useState(false);
 const [notifications, setNotifications] = useState<any[]>([]);
 const [showNotifications, setShowNotifications] = useState(false);
+const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
+
+useEffect(() => {
+  const saved = localStorage.getItem("topper_read_notifications");
+  if (saved) {
+    setReadNotificationIds(JSON.parse(saved));
+  }
+}, []);
+const openNotifications = () => {
+  setShowNotifications(true);
+
+  const ids = notifications.map((item) => String(item.id));
+
+  setReadNotificationIds((previous) => {
+    const updated = Array.from(new Set([...previous, ...ids]));
+
+    localStorage.setItem(
+      "topper_read_notifications",
+      JSON.stringify(updated)
+    );
+
+    return updated;
+  });
+};
 const [adminNotificationTitle, setAdminNotificationTitle] = useState("");
 const [adminNotificationMessage, setAdminNotificationMessage] = useState("");
 const [adminNotificationAudience, setAdminNotificationAudience] = useState("public");
@@ -686,15 +710,15 @@ async function importExcel(e: { target: HTMLInputElement }) {
     (sum, arr) => sum + arr.length, 0
   );
 
-  const buttonClass = "px-4 py-2 rounded-lg font-semibold transition";
+const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transition text-sm sm:text-base";
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
 
       <header className="bg-slate-950 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-5 py-5 flex flex-wrap justify-between items-center gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 py-3 sm:py-5 flex flex-wrap justify-between items-center gap-3">
           <button onClick={() => setPage("home")} className="text-left">
-            <h1 className="text-3xl font-black text-yellow-400">TOPPER TEST</h1>
+            <h1 className="text-2xl sm:text-3xl font-black text-yellow-400">TOPPER TEST</h1>
             <p className="text-sm text-slate-300">
               Rajasthan Competitive Exam Practice
             </p>
@@ -710,19 +734,36 @@ async function importExcel(e: { target: HTMLInputElement }) {
   </button>
 
   <button
-    onClick={() => setShowNotifications(!showNotifications)}
-    className="relative bg-slate-700 text-white px-4 py-2 rounded-lg"
+  const openNotifications = () => {
+  setShowNotifications(true);
+
+  const ids = notifications.map((item) => String(item.id));
+  const updated = Array.from(
+    new Set([...readNotificationIds, ...ids])
+  );
+
+  setReadNotificationIds(updated);
+  localStorage.setItem(
+    "topper_read_notifications",
+    JSON.stringify(updated)
+  );
+};
+   className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base"
   >
     🔔
-    {notifications.length > 0 && (
-      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2">
-        {notifications.length}
-      </span>
-    )}
+   {notifications.filter(
+  (item) => !readNotificationIds.includes(String(item.id))
+).length > 0 && (
+  <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2">
+    {notifications.filter(
+      (item) => !readNotificationIds.includes(String(item.id))
+    ).length}
+  </span>
+)}
   </button>
 
   {studentProfile ? (
-  <div className="bg-slate-800 rounded-xl p-3 text-sm text-white">
+  <div className="bg-slate-800 rounded-xl p-2 sm:p-3 text-xs sm:text-sm text-white">
     <p className="font-bold text-yellow-400">
       {studentProfile.name || "Student"}
     </p>
@@ -798,9 +839,9 @@ async function importExcel(e: { target: HTMLInputElement }) {
         <></>
       {page === "home" && (
         <>
-          <section className="bg-gradient-to-r from-blue-950 to-indigo-700 text-white py-16 px-5">
+          <section className="bg-gradient-to-r from-blue-950 to-indigo-700 text-white py-10 md:py-16 px-4 sm:px-5">
             <div className="max-w-7xl mx-auto">
-              <h2 className="text-4xl md:text-5xl font-black mb-4">
+             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-4">
                 अपनी तैयारी को दें नई उड़ान!
               </h2>
               <p className="text-lg text-blue-100 mb-7">
@@ -815,7 +856,7 @@ async function importExcel(e: { target: HTMLInputElement }) {
             </div>
           </section>
 
-          <section className="max-w-7xl mx-auto px-5 py-10">
+          <section className="max-w-7xl mx-auto px-3 sm:px-5 py-6 sm:py-10">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 ["📚", `${subjects.length}+`, "विषय"],
@@ -823,8 +864,8 @@ async function importExcel(e: { target: HTMLInputElement }) {
                 ["🎯", "Mock Tests", "प्रैक्टिस"],
                 ["🏆", "Analysis", "रिजल्ट"],
               ].map((item) => (
-                <div key={item[1]} className="bg-white rounded-2xl p-5 shadow-sm text-center">
-                  <div className="text-3xl">{item[0]}</div>
+                <div key={item[1]} className="bg-white rounded-2xl p-3 sm:p-5 shadow-sm text-center">
+                 <div className="text-2xl sm:text-3xl">{item[0]}</div>
                   <h3 className="text-xl font-bold mt-2">{item[1]}</h3>
                   <p className="text-slate-500">{item[2]}</p>
                 </div>
@@ -832,7 +873,7 @@ async function importExcel(e: { target: HTMLInputElement }) {
             </div>
           </section>
 
-          <section id="subjects" className="max-w-7xl mx-auto px-5 py-8">
+         <section id="subjects" className="max-w-7xl mx-auto px-3 sm:px-5 py-6 sm:py-8">
             <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
               <div>
                 <h2 className="text-3xl font-bold">विषय चुनें</h2>
