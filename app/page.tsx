@@ -734,20 +734,6 @@ const buttonClass = "px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transi
   </button>
 
   <button
-  const openNotifications = () => {
-  setShowNotifications(true);
-
-  const ids = notifications.map((item) => String(item.id));
-  const updated = Array.from(
-    new Set([...readNotificationIds, ...ids])
-  );
-
-  setReadNotificationIds(updated);
-  localStorage.setItem(
-    "topper_read_notifications",
-    JSON.stringify(updated)
-  );
-};
    className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm sm:text-base"
   >
     🔔
