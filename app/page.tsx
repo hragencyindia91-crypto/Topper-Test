@@ -1746,7 +1746,7 @@ if (data.session) {
     Rajasthan Competitive Exam Practice Platform
   </p>
 
-  <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 mt-6 px-4">
+<div className="grid grid-cols-2 sm:flex sm:flex-wrap justify-center gap-x-4 gap-y-4 mt-6 px-4">
     <a href="/about" className="text-slate-300 hover:text-yellow-400">About Us</a>
     <a href="/contact" className="text-slate-300 hover:text-yellow-400">Contact Us</a>
     <a href="/privacy-policy" className="text-slate-300 hover:text-yellow-400">Privacy Policy</a>
