@@ -64,7 +64,10 @@ type Question = {
 export default function Home() {
   const [subjects, setSubjects] = useState(defaultSubjects);
   const [topics, setTopics] = useState(defaultTopics);
-
+const [page, setPage] = useState("home");
+const [selectedTopic, setSelectedTopic] = useState("");
+const [loginOpen, setLoginOpen] = useState(false);
+const [studentMode, setStudentMode] = useState<"login" | "signup">("login");
 const [questions, setQuestions] = useState<Question[]>([]);
 
 useEffect(() => {
