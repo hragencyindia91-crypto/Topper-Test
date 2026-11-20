@@ -1146,9 +1146,10 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
           <p className="text-slate-500 mb-6">अपना टॉपिक चुनें और अभ्यास शुरू करें।</p>
 
 
+
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
   {(topics[selectedSubject] || []).map((topic) => {
-const attempted = topicAttempts.some(
+    const attempted = topicAttempts.some(
       (result) =>
         result.subject === selectedSubject &&
         result.topic === topic
@@ -1159,7 +1160,9 @@ const attempted = topicAttempts.some(
         key={topic}
         className="bg-white border rounded-xl p-5 shadow-sm"
       >
-   <div className="font-semibold text-lg">{String(topic)}</div>
+        <div className="font-semibold text-lg">
+          {String(topic)}
+        </div>
 
         <button
           onClick={() => {
@@ -1172,42 +1175,47 @@ const attempted = topicAttempts.some(
           }}
           className="mt-3 text-sm font-bold text-white bg-blue-600 rounded-lg px-5 py-2"
         >
+          {attempted ? "🔄 Retest" : "🚀 Start Test"}
+        </button>
+
         {attempted && (
-  <button
-    onClick={async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+          <button
+            onClick={async () => {
+              const { data: { user } } =
+                await supabase.auth.getUser();
 
-      if (!user) {
-        alert("पहले Student Login करें।");
-        return;
-      }
+              if (!user) {
+                alert("पहले Student Login करें।");
+                return;
+              }
 
-      const { data, error } = await supabase
-        .from("test_results")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("subject", selectedSubject)
-        .eq("topic", topic)
-        .order("created_at", { ascending: false });
+              const { data, error } = await supabase
+                .from("test_results")
+                .select("*")
+                .eq("user_id", user.id)
+                .eq("subject", selectedSubject)
+                .eq("topic", topic)
+                .order("created_at", { ascending: false });
 
-      if (error) {
-        alert("Results लोड नहीं हुए: " + error.message);
-        return;
-      }
+              if (error) {
+                alert("Results लोड नहीं हुए: " + error.message);
+                return;
+              }
 
-      setSelectedTopic(topic);
-      setSelectedTopicResults(data || []);
-      setPage("topicResults");
-    }}
-    className="mt-3 ml-2 text-sm font-bold text-blue-700 border border-blue-600 rounded-lg px-4 py-2"
-  >
-    📊 Old Results
-  </button>
-)}
+              setSelectedTopic(topic);
+              setSelectedTopicResults(data || []);
+              setPage("topicResults");
+            }}
+            className="mt-3 ml-2 text-sm font-bold text-blue-700 border border-blue-600 rounded-lg px-4 py-2"
+          >
+            📊 Old Results
+          </button>
+        )}
       </div>
     );
   })}
 </div>
+
 
 
           {(topics[selectedSubject] || []).length === 0 && (
