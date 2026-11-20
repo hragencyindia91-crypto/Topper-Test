@@ -1144,34 +1144,40 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
           <h2 className="text-3xl font-bold mb-2">{subjectIcons[selectedSubject]} {selectedSubject}</h2>
           <p className="text-slate-500 mb-6">अपना टॉपिक चुनें और अभ्यास शुरू करें।</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(topics[selectedSubject] || []).map((topic) => (
-              <button
-                key={topic}
-                onClick={() => {
-  setSelectedTopic(topic);
-  if (studentProfile) {
-    startTest(topic);
-  } else {
-    setLoginOpen(true);
-  }
-}}
-                className="bg-white border rounded-xl p-5 text-left font-semibold hover:border-blue-500 shadow-sm"
-              >
-         <div>{topic}</div>
 
-<div className="mt-2 text-sm font-bold text-blue-700">
-  {myResults.some(
-    (result) =>
-      result.subject === selectedSubject &&
-      result.topic === topic
-  )
-    ? "🔄 Retest"
-    : "🚀 Start Test"}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {(topics[selectedSubject] || []).map((topic) => {
+    const attempted = myResults.some(
+      (result) =>
+        result.subject === selectedSubject &&
+        result.topic === topic
+    );
+
+    return (
+      <div
+        key={topic}
+        className="bg-white border rounded-xl p-5 shadow-sm"
+      >
+        <div className="font-semibold text-lg">{topic}</div>
+
+        <button
+          onClick={() => {
+            setSelectedTopic(topic);
+            if (studentProfile) {
+              startTest(topic);
+            } else {
+              setLoginOpen(true);
+            }
+          }}
+          className="mt-3 text-sm font-bold text-white bg-blue-600 rounded-lg px-5 py-2"
+        >
+          {attempted ? "🔄 Retest" : "🚀 Start Test"}
+        </button>
+      </div>
+    );
+  })}
 </div>
-              </button>
-            ))}
-          </div>
+
 
           {(topics[selectedSubject] || []).length === 0 && (
             <p className="bg-white p-5 rounded-xl border">
