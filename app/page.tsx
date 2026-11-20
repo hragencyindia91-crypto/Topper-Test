@@ -1424,23 +1424,80 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
     })()}
   </div>
 )}
-      {page === "myResults" && (
+
+{page === "myResults" && (
   <div className="max-w-4xl mx-auto p-4">
     <h2 className="text-2xl font-bold text-center mb-6">
       📊 मेरे सभी टेस्ट रिजल्ट
     </h2>
 
     {resultsLoading ? (
-      <p className="text-center py-8">रिजल्ट लोड हो रहे हैं...</p>
+      <p className="text-center py-8">
+        रिजल्ट लोड हो रहे हैं...
+      </p>
     ) : myResults.length === 0 ? (
       <p className="text-center py-8 text-gray-500">
         अभी तक आपने कोई टेस्ट नहीं दिया है।
       </p>
     ) : (
-     C
+      <div className="space-y-4">
+        {myResults.map((result, index) => (
+          <div
+            key={result.id || index}
+            className="border rounded-xl p-4 bg-white"
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <b>{result.subject}</b>
+                <p className="text-sm text-gray-600">
+                  {result.topic}
+                </p>
+              </div>
+
+              <span className="text-green-600 text-2xl font-bold">
+                {result.score}%
+              </span>
+            </div>
+
+            <p className="text-sm text-gray-500 mt-2">
+              {new Date(result.created_at).toLocaleString("en-IN")}
+            </p>
+
+            <div className="grid grid-cols-4 gap-2 mt-4 text-center">
+              <div className="bg-slate-100 rounded p-2">
+                <b>{result.total_questions}</b>
+                <p className="text-xs">कुल प्रश्न</p>
+              </div>
+
+              <div className="bg-green-100 rounded p-2">
+                <b>{result.correct}</b>
+                <p className="text-xs">सही</p>
+              </div>
+
+              <div className="bg-red-100 rounded p-2">
+                <b>{result.wrong}</b>
+                <p className="text-xs">गलत</p>
+              </div>
+
+              <div className="bg-gray-100 rounded p-2">
+                <b>{result.skipped}</b>
+                <p className="text-xs">छोड़े</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+
+    <button
+      onClick={() => setPage("home")}
+      className="w-full bg-blue-600 text-white rounded-lg p-3 mt-5"
+    >
+      Home पर जाएँ
     </button>
   </div>
 )}
+
  {page === "topicResults" && (
   <div className="max-w-4xl mx-auto p-4">
     <button
