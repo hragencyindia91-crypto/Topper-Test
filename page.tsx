@@ -84,6 +84,7 @@ const [adminNotificationLoading, setAdminNotificationLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [testQuestions, setTestQuestions] = useState<Question[]>([]);
 const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [resultFilter, setResultFilter] = useState("all");
 const [currentQuestion, setCurrentQuestion] = useState(0);
 const [timeLeft, setTimeLeft] = useState(30 * 60);
 const [newTopicTime, setNewTopicTime] = useState(30);
@@ -1073,26 +1074,54 @@ async function importExcel(e: { target: HTMLInputElement }) {
 
           <h3 className="text-xl font-bold mb-3">प्रश्नों की जाँच</h3>
 
-          {testQuestions.map((q, index) => (
-            <div key={q.id} className="border rounded-lg p-3 mb-3">
-              <b>{index + 1}. {q.question}</b>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+  {[
+    { id: "all", label: "सभी सवाल" },
+    { id: "correct", label: "सही सवाल" },
+    { id: "wrong", label: "गलत सवाल" },
+    { id: "skipped", label: "छोड़े गए" },
+  ].map((item) => (
+    <button
+      key={item.id}
+      onClick={() => setResultFilter(item.id)}
+      className={`p-3 rounded-lg font-bold border ${
+        resultFilter === item.id
+          ? "bg-blue-600 text-white"
+          : "bg-white text-gray-700"
+      }`}
+    >
+      {item.label}
+    </button>
+  ))}
+</div>
 
-              <p className="mt-2">
-                आपका जवाब:{" "}
-                {answers[q.id] === undefined
-                  ? "नहीं दिया"
-                  : q.options[answers[q.id]]}
-              </p>
+{testQuestions
+  .filter((q) => {
+    if (resultFilter === "correct") return answers[q.id] === q.correct;
+    if (resultFilter === "wrong")
+      return answers[q.id] !== undefined && answers[q.id] !== q.correct;
+    if (resultFilter === "skipped") return answers[q.id] === undefined;
+    return true;
+  })
+  .map((q) => {
+    const index = testQuestions.findIndex((item) => item.id === q.id);
 
-              <p className="text-green-700">
-                सही जवाब: {q.options[q.correct]}
-              </p>
-
-              <p className="mt-2 text-gray-600">
-                {q.explanation}
-              </p>
-            </div>
-          ))}
+    return (
+      <div key={q.id} className="border rounded-lg p-3 mb-3">
+        <b>{index + 1}. {q.question}</b>
+        <p className="mt-2">
+          आपका जवाब:{" "}
+          {answers[q.id] === undefined
+            ? "नहीं दिया"
+            : q.options[answers[q.id]]}
+        </p>
+        <p className="text-green-700">
+          सही जवाब: {q.options[q.correct]}
+        </p>
+        <p className="mt-2 text-gray-600">{q.explanation}</p>
+      </div>
+    );
+  })}
 
           <button
             onClick={() => setPage("home")}
