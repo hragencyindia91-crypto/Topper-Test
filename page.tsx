@@ -794,9 +794,6 @@ async function importExcel(e: { target: HTMLInputElement }) {
           </div>
         </div>
       )}
-
-      (
-        <></>
       {page === "home" && (
         <>
           <section className="bg-gradient-to-r from-blue-950 to-indigo-700 text-white py-16 px-5">
