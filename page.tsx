@@ -67,6 +67,7 @@ export default function Home() {
   const [topics, setTopics] = useState(defaultTopics);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [topicAttempts, setTopicAttempts] = useState<any[]>([]);
 const [notifications, setNotifications] = useState<any[]>([]);
 const [showNotifications, setShowNotifications] = useState(false);
 const [adminNotificationTitle, setAdminNotificationTitle] = useState("");
