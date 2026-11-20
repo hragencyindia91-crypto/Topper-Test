@@ -1158,7 +1158,7 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
         key={topic}
         className="bg-white border rounded-xl p-5 shadow-sm"
       >
-       <div className="font-semibold text-lg">{String(topic)}</div>
+     <div className="font-semibold text-lg">{typeof topic === "string" ? topic : JSON.stringify(topic)}</div>
 
         <button
           onClick={() => {
