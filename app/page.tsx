@@ -1554,6 +1554,7 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
     )}
   </div>
 )}
+      {page === "adminLogin" && (
         <section className="max-w-md mx-auto px-4 py-12">
           <div className="bg-white border rounded-2xl p-7 shadow-sm">
             <h2 className="text-2xl font-bold mb-2">Admin Login</h2>
