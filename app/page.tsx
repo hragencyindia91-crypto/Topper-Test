@@ -3,8 +3,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import * as XLSX from "xlsx";
-
 const ADMIN_EMAIL = "hrpramodnagar@gmail.com";
 
 const defaultSubjects = [
