@@ -1,5 +1,4 @@
 "use client";
-
 import { supabase } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
