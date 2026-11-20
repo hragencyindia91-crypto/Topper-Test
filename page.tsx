@@ -1482,8 +1482,8 @@ async function importExcel(e: { target: HTMLInputElement }) {
             <button onClick={() => deleteTopic(topic)} className="text-red-600 text-sm font-semibold">हटाएँ</button>
           </div>
         </div>
-      );
-  ))}
+            );
+    })}
   </div>
 )}
             </div>
