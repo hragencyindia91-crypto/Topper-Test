@@ -1,4 +1,4 @@
-"use client";
+"use client";})
 
 import { supabase } from "@/lib/supabase/client";
 
@@ -1483,7 +1483,7 @@ async function importExcel(e: { target: HTMLInputElement }) {
           </div>
         </div>
       );
-    })}
+  ))}
   </div>
 )}
             </div>
