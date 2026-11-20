@@ -1098,31 +1098,23 @@ async function importExcel(e: { target: HTMLInputElement }) {
 {testQuestions
   .filter((q) => {
     if (resultFilter === "correct") return answers[q.id] === q.correct;
-    if (resultFilter === "wrong")
-      return answers[q.id] !== undefined && answers[q.id] !== q.correct;
+    if (resultFilter === "wrong") return answers[q.id] !== undefined && answers[q.id] !== q.correct;
     if (resultFilter === "skipped") return answers[q.id] === undefined;
     return true;
   })
-  .map((q) => {
-    const index = testQuestions.findIndex((item) => item.id === q.id);
-
-    return (
-      <div key={q.id} className="border rounded-lg p-3 mb-3">
-        <b>{index + 1}. {q.question}</b>
-        <p className="mt-2">
-          आपका जवाब:{" "}
-          {answers[q.id] === undefined
-            ? "नहीं दिया"
-            : q.options[answers[q.id]]}
-        </p>
-        <p className="text-green-700">
-          सही जवाब: {q.options[q.correct]}
-        </p>
-        <p className="mt-2 text-gray-600">{q.explanation}</p>
-      </div>
-    );
-  })}
-
+  .map((q) => (
+    <div key={q.id} className="border rounded-lg p-3 mb-3">
+      <b>{testQuestions.findIndex((item) => item.id === q.id) + 1}. {q.question}</b>
+      <p className="mt-2">
+        आपका जवाब:{" "}
+        {answers[q.id] === undefined ? "नहीं दिया" : q.options[answers[q.id]]}
+      </p>
+      <p className="text-green-700">
+        सही जवाब: {q.options[q.correct]}
+      </p>
+      <p className="mt-2 text-gray-600">{q.explanation}</p>
+    </div>
+  ))}
           <button
             onClick={() => setPage("home")}
             className="w-full bg-blue-600 text-white rounded-lg p-3 mt-3"
