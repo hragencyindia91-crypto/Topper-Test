@@ -66,6 +66,8 @@ export default function Home() {
   const [subjects, setSubjects] = useState(defaultSubjects);
   const [topics, setTopics] = useState(defaultTopics);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [topicAttempts, setTopicAttempts] = useState<any[]>([]);
+
 
   const [page, setPage] = useState("home");
   const [selectedSubject, setSelectedSubject] = useState("");
