@@ -81,9 +81,10 @@ export default function Home() {
   const [testQuestions, setTestQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [myResults, setMyResults] = useState<any[]>([]);
+ const [selectedTopicResults, setSelectedTopicResults] = useState<any[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [savingResult, setSavingResult] = useState(false);
-
+const [resultFilter, setResultFilter] = useState("all");
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30 * 60);
 
@@ -115,11 +116,11 @@ export default function Home() {
 
       const { data, error } = await supabase
         .from("test_results")
-        .select("subject, topic")
+       .select("*")
         .eq("user_id", user.id);
 
       if (!error) {
-        setMyResults(data || []);
+setTopicAttempts(data || []);
       }
     };
 
@@ -1147,7 +1148,7 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
 
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
   {(topics[selectedSubject] || []).map((topic) => {
-    const attempted = myResults.some(
+const attempted = topicAttempts.some(
       (result) =>
         result.subject === selectedSubject &&
         result.topic === topic
@@ -1171,8 +1172,38 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
           }}
           className="mt-3 text-sm font-bold text-white bg-blue-600 rounded-lg px-5 py-2"
         >
-          {attempted ? "🔄 Retest" : "🚀 Start Test"}
-        </button>
+        {attempted && (
+  <button
+    onClick={async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert("पहले Student Login करें।");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("test_results")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("subject", selectedSubject)
+        .eq("topic", topic)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        alert("Results लोड नहीं हुए: " + error.message);
+        return;
+      }
+
+      setSelectedTopic(topic);
+      setSelectedTopicResults(data || []);
+      setPage("topicResults");
+    }}
+    className="mt-3 ml-2 text-sm font-bold text-blue-700 border border-blue-600 rounded-lg px-4 py-2"
+  >
+    📊 Old Results
+  </button>
+)}
       </div>
     );
   })}
@@ -1311,27 +1342,69 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
 
           <h3 className="text-xl font-bold mb-3">प्रश्नों की जाँच</h3>
 
-          {testQuestions.map((q, index) => (
-            <div key={q.id} className="border rounded-lg p-3 mb-3">
-              <b>{index + 1}. {q.question}</b>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+  {[
+    { id: "all", label: "सभी सवाल" },
+    { id: "correct", label: "सही सवाल" },
+    { id: "wrong", label: "गलत सवाल" },
+    { id: "skipped", label: "छोड़े गए" },
+  ].map((item) => (
+    <button
+      key={item.id}
+      onClick={() => setResultFilter(item.id)}
+      className={`p-3 rounded-lg font-bold border ${
+        resultFilter === item.id
+          ? "bg-blue-600 text-white"
+          : "bg-white text-gray-700"
+      }`}
+    >
+      {item.label}
+    </button>
+  ))}
+</div>
 
-              <p className="mt-2">
-                आपका जवाब:{" "}
-                {answers[q.id] === undefined
-                  ? "नहीं दिया"
-                  : q.options[answers[q.id]]}
-              </p>
+{testQuestions
+  .filter((q) => {
+    if (resultFilter === "correct") return answers[q.id] === q.correct;
+    if (resultFilter === "wrong")
+      return answers[q.id] !== undefined && answers[q.id] !== q.correct;
+    if (resultFilter === "skipped") return answers[q.id] === undefined;
+    return true;
+  })
+  .map((q) => {
+    const index = testQuestions.findIndex((item) => item.id === q.id);
 
-              <p className="text-green-700">
-                सही जवाब: {q.options[q.correct]}
-              </p>
+    return (
+      <div key={q.id} className="border rounded-lg p-3 mb-3">
+        <b>{index + 1}. {q.question}</b>
 
-              <p className="mt-2 text-gray-600">
-                {q.explanation}
-              </p>
-            </div>
-          ))}
+        <p className="mt-2">
+          आपका जवाब:{" "}
+          {answers[q.id] === undefined
+            ? "नहीं दिया"
+            : q.options[answers[q.id]]}
+        </p>
 
+        <p className="text-green-700">
+          सही जवाब: {q.options[q.correct]}
+        </p>
+
+        <p className="mt-2 text-gray-600">{q.explanation}</p>
+      </div>
+    );
+  })}
+
+{testQuestions.filter((q) => {
+  if (resultFilter === "correct") return answers[q.id] === q.correct;
+  if (resultFilter === "wrong")
+    return answers[q.id] !== undefined && answers[q.id] !== q.correct;
+  if (resultFilter === "skipped") return answers[q.id] === undefined;
+  return true;
+}).length === 0 && (
+  <p className="text-center text-gray-500 p-4">
+    इस श्रेणी में कोई सवाल नहीं है।
+  </p>
+)}
           <button
             onClick={() => setPage("home")}
             className="w-full bg-blue-600 text-white rounded-lg p-3 mt-3"
@@ -1356,45 +1429,56 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
         अभी तक आपने कोई टेस्ट नहीं दिया है।
       </p>
     ) : (
-      <div className="space-y-4">
-        {myResults.map((result) => (
-          <div
-            key={result.id}
-            className="border rounded-xl p-4 shadow-sm bg-white"
-          >
-            <div className="flex justify-between gap-3 flex-wrap">
-              <div>
-                <h3 className="font-bold text-lg text-blue-950">
-                  {result.subject || "विषय"}
-                </h3>
-                <p className="text-gray-600">{result.topic || "टॉपिक"}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {new Date(result.created_at).toLocaleString("en-IN")}
-                </p>
-              </div>
+     C
+    </button>
+  </div>
+)}
+ {page === "topicResults" && (
+  <div className="max-w-4xl mx-auto p-4">
+    <button
+      onClick={() => setPage("topics")}
+      className="text-blue-700 font-semibold mb-5"
+    >
+      ← वापस टॉपिक्स पर
+    </button>
 
-              <div className="text-right">
-                <p className="text-2xl font-bold text-green-600">
-                  {result.score}%
-                </p>
-                <p className="text-sm text-gray-500">स्कोर</p>
-              </div>
+    <h2 className="text-2xl font-bold mb-5">
+      📊 {selectedTopic} — सभी Attempts
+    </h2>
+
+    {selectedTopicResults.length === 0 ? (
+      <p className="text-center py-8 text-gray-500">
+        कोई पुराना Result नहीं मिला।
+      </p>
+    ) : (
+      <div className="space-y-4">
+        {selectedTopicResults.map((result, index) => (
+          <div key={result.id || index} className="border rounded-xl p-4 bg-white">
+            <div className="flex justify-between items-center">
+              <b>Attempt {selectedTopicResults.length - index}</b>
+              <span className="text-green-600 text-2xl font-bold">
+                {result.score}%
+              </span>
             </div>
 
+            <p className="text-sm text-gray-500 mt-1">
+              {new Date(result.created_at).toLocaleString("en-IN")}
+            </p>
+
             <div className="grid grid-cols-4 gap-2 mt-4 text-center">
-              <div className="bg-slate-100 rounded-lg p-2">
+              <div className="bg-slate-100 rounded p-2">
                 <b>{result.total_questions}</b>
                 <p className="text-xs">कुल प्रश्न</p>
               </div>
-              <div className="bg-green-100 rounded-lg p-2">
+              <div className="bg-green-100 rounded p-2">
                 <b>{result.correct}</b>
                 <p className="text-xs">सही</p>
               </div>
-              <div className="bg-red-100 rounded-lg p-2">
+              <div className="bg-red-100 rounded p-2">
                 <b>{result.wrong}</b>
                 <p className="text-xs">गलत</p>
               </div>
-              <div className="bg-gray-100 rounded-lg p-2">
+              <div className="bg-gray-100 rounded p-2">
                 <b>{result.skipped}</b>
                 <p className="text-xs">छोड़े</p>
               </div>
@@ -1403,16 +1487,8 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
         ))}
       </div>
     )}
-
-    <button
-      onClick={() => setPage("home")}
-      className="w-full mt-6 bg-blue-700 text-white py-3 rounded-lg font-bold"
-    >
-      Home पर जाएँ
-    </button>
   </div>
 )}
-      {page === "adminLogin" && (
         <section className="max-w-md mx-auto px-4 py-12">
           <div className="bg-white border rounded-2xl p-7 shadow-sm">
             <h2 className="text-2xl font-bold mb-2">Admin Login</h2>
