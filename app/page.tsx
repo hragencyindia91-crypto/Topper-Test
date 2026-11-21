@@ -507,15 +507,27 @@ useEffect(() => {
   alert("Admin Login Successful!");
 };
 
-  function addSubject() {
-    const name = newSubject.trim();
-    if (!name) return alert("विषय का नाम लिखें");
-    if (subjects.includes(name)) return alert("यह विषय पहले से मौजूद है");
+  async function addSubject() {
+  const name = newSubject.trim();
 
-    setSubjects([...subjects, name]);
-    setTopics({ ...topics, [name]: [] });
-    setNewSubject("");
+  if (!name) return alert("विषय का नाम लिखें");
+  if (subjects.includes(name)) return alert("यह विषय पहले से मौजूद है");
+
+  const { error } = await supabase
+    .from("subjects")
+    .insert({ name });
+
+  if (error) {
+    alert("Subject सेव नहीं हुआ: " + error.message);
+    return;
   }
+
+  setSubjects((previous) => [...previous, name]);
+  setTopics((previous) => ({ ...previous, [name]: [] }));
+  setNewSubject("");
+
+  alert("Subject Supabase में सेव हो गया");
+}
 
   function deleteSubject(name: string) {
     if (!confirm(`क्या "${name}" विषय हटाना चाहते हैं?`)) return;
@@ -581,23 +593,7 @@ function moveTopic(topic: string, direction: number) {
   });
 }
 
- function addTopic() {
-  const name = newTopic.trim();
 
-  if (!selectedSubject) return alert("पहले विषय चुनें");
-  if (!name) return alert("टॉपिक का नाम लिखें");
-
-  const current = topics[selectedSubject] || [];
-  if (current.includes(name)) return alert("यह टॉपिक पहले से मौजूद है");
-
-  setTopics({ ...topics, [selectedSubject]: [...current, name] });
-
-  const key = `${selectedSubject}::${name}`;
-  setTopicTimes({ ...topicTimes, [key]: newTopicTime });
-
-  setNewTopic("");
-  setNewTopicTime(30);
-}
   function deleteTopic(name: string) {
     if (!confirm(`क्या "${name}" टॉपिक हटाना चाहते हैं?`)) return;
 
@@ -611,6 +607,54 @@ function moveTopic(topic: string, direction: number) {
     ));
   }
 
+async function addTopic() {
+  const name = newTopic.trim();
+
+  if (!selectedSubject) return alert("पहले विषय चुनें");
+  if (!name) return alert("टॉपिक का नाम लिखें");
+
+  const current = topics[selectedSubject] || [];
+  if (current.includes(name)) return alert("यह टॉपिक पहले से मौजूद है");
+
+  const { data: subjectData, error: subjectError } = await supabase
+    .from("subjects")
+    .select("id")
+    .eq("name", selectedSubject)
+    .single();
+
+  if (subjectError || !subjectData) {
+    alert("Subject नहीं मिला: " + (subjectError?.message || ""));
+    return;
+  }
+
+  const { error } = await supabase
+    .from("topics")
+    .insert({
+      subject_id: subjectData.id,
+      name: name,
+    });
+
+  if (error) {
+    alert("Topic Supabase में सेव नहीं हुआ: " + error.message);
+    return;
+  }
+
+  setTopics((previous) => ({
+    ...previous,
+    [selectedSubject]: [...(previous[selectedSubject] || []), name],
+  }));
+
+  const key = `${selectedSubject}::${name}`;
+  setTopicTimes((previous) => ({
+    ...previous,
+    [key]: newTopicTime,
+  }));
+
+  setNewTopic("");
+  setNewTopicTime(30);
+
+  alert("Topic Supabase में सेव हो गया");
+}
   function editTopic(oldName: string) {
     const newName = prompt("टॉपिक का नया नाम लिखें", oldName)?.trim();
     if (!newName || newName === oldName) return;
@@ -710,116 +754,152 @@ function moveTopic(topic: string, direction: number) {
     XLSX.utils.book_append_sheet(workbook, worksheet, "प्रश्न");
     XLSX.writeFile(workbook, "TOPPER_TEST_प्रश्न_टेम्पलेट.xlsx");
   }
+
 async function importExcel(e: { target: HTMLInputElement }) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    try {
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+  try {
+    const subject = selectedSubject || subjects[0] || "सामान्य";
+    const topic =
+      selectedTopic || (topics[subject] || [])[0] || "सामान्य";
 
-      if (!firstSheet) {
-        alert("Excel फाइल में कोई शीट नहीं मिली।");
+    const { data: subjectData, error: subjectError } = await supabase
+      .from("subjects")
+      .select("id")
+      .eq("name", subject)
+      .single();
+
+    if (subjectError || !subjectData) {
+      alert("Supabase में Subject नहीं मिला: " + subjectError?.message);
+      return;
+    }
+
+    const { data: topicData, error: topicError } = await supabase
+      .from("topics")
+      .select("id")
+      .eq("subject_id", subjectData.id)
+      .eq("name", topic)
+      .single();
+
+    if (topicError || !topicData) {
+      alert("Supabase में Topic नहीं मिला: " + topicError?.message);
+      return;
+    }
+
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    if (!firstSheet) {
+      alert("Excel फाइल में कोई शीट नहीं मिली।");
+      return;
+    }
+
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+      firstSheet,
+      { defval: "" }
+    );
+
+    const imported: Question[] = [];
+    const errors: string[] = [];
+
+    rows.forEach((row, index) => {
+      const getValue = (...keys: string[]) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== "") {
+            return String(row[key]).trim();
+          }
+        }
+        return "";
+      };
+
+      const question = getValue("प्रश्न", "Question");
+
+      const options = [
+        getValue("विकल्प A", "विकल्प 1", "Option A"),
+        getValue("विकल्प B", "विकल्प 2", "Option B"),
+        getValue("विकल्प C", "विकल्प 3", "Option C"),
+        getValue("विकल्प D", "विकल्प 4", "Option D"),
+      ];
+
+      const answerText = getValue(
+        "Right Answer",
+        "सही उत्तर",
+        "उत्तर",
+        "Answer"
+      ).toUpperCase();
+
+      if (!question && options.every((o) => !o) && !answerText) return;
+
+      if (!question || options.some((o) => !o)) {
+        errors.push(`पंक्ति ${index + 2}: प्रश्न और चारों विकल्प भरें`);
         return;
       }
 
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-        firstSheet,
-        { defval: "" }
-      );
+      const answerMap: Record<string, number> = {
+        A: 0, B: 1, C: 2, D: 3,
+        "1": 0, "2": 1, "3": 2, "4": 3,
+      };
 
-      const subject = selectedSubject || subjects[0] || "सामान्य";
-      const topic =
-        selectedTopic || (topics[subject] || [])[0] || "सामान्य";
-
-      const imported: Question[] = [];
-      const errors: string[] = [];
-
-      rows.forEach((row, index) => {
-        const getValue = (...keys: string[]) => {
-          for (const key of keys) {
-            if (row[key] !== undefined && row[key] !== "") {
-              return String(row[key]).trim();
-            }
-          }
-          return "";
-        };
-
-        const question = getValue("प्रश्न", "Question");
-        const options = [
-          getValue("विकल्प A", "विकल्प 1", "Option A"),
-          getValue("विकल्प B", "विकल्प 2", "Option B"),
-          getValue("विकल्प C", "विकल्प 3", "Option C"),
-          getValue("विकल्प D", "विकल्प 4", "Option D"),
-        ];
-
-        const answerText = getValue(
-          "Right Answer",
-          "सही उत्तर",
-          "उत्तर",
-          "Answer"
-        ).toUpperCase();
-
-        if (!question && options.every((o) => !o) && !answerText) {
-          return;
-        }
-
-        if (!question || options.some((o) => !o)) {
-          errors.push(`पंक्ति ${index + 2}: प्रश्न और चारों विकल्प भरें`);
-          return;
-        }
-
-        const answerMap: Record<string, number> = {
-          A: 0,
-          B: 1,
-          C: 2,
-          D: 3,
-          "1": 0,
-          "2": 1,
-          "3": 2,
-          "4": 3,
-        };
-
-        if (answerMap[answerText] === undefined) {
-          errors.push(
-            `पंक्ति ${index + 2}: Right Answer में A/B/C/D या 1/2/3/4 लिखें`
-          );
-          return;
-        }
-
-        imported.push({
-          id: Date.now() + questions.length + index,
-          subject,
-          topic,
-          question,
-          options,
-          correct: answerMap[answerText],
-          explanation: getValue("व्याख्या", "Explanation"),
-        });
-      });
-
-      if (imported.length > 0) {
-        setQuestions((previous) => [...previous, ...imported]);
+      if (answerMap[answerText] === undefined) {
+        errors.push(`पंक्ति ${index + 2}: सही उत्तर A/B/C/D या 1/2/3/4 लिखें`);
+        return;
       }
 
-      const errorMessage = errors.length
-        ? `\n\nसमस्या वाली पंक्तियाँ:\n${errors.slice(0, 5).join("\n")}`
-        : "";
+      imported.push({
+        id: Date.now() + questions.length + index,
+        subject,
+        topic,
+        question,
+        options,
+        correct: answerMap[answerText],
+        explanation: getValue("व्याख्या", "Explanation"),
+      });
+    });
 
-      alert(
-        `${imported.length} प्रश्न सफलतापूर्वक इम्पोर्ट हुए।` +
-          (errors.length
-            ? `\n${errors.length} पंक्तियाँ इम्पोर्ट नहीं हुईं।`
-            : "") +
-          errorMessage
-      );
-    } catch {
-      alert("Excel फाइल पढ़ने में समस्या आई।");
-    } finally {
-      e.target.value = "";
+    if (imported.length === 0) {
+      alert("इम्पोर्ट करने के लिए कोई सही प्रश्न नहीं मिला।");
+      return;
     }
+
+    const databaseQuestions = imported.map((q) => ({
+      subject_id: subjectData.id,
+      topic_id: topicData.id,
+      question: q.question,
+      options: q.options,
+      correct: q.correct,
+      explanation: q.explanation,
+    }));
+
+    const { error: saveError } = await supabase
+      .from("questions")
+      .insert(databaseQuestions);
+
+    if (saveError) {
+      alert("Supabase में प्रश्न सेव नहीं हुए: " + saveError.message);
+      return;
+    }
+
+    setQuestions((previous) => [...previous, ...imported]);
+
+    const errorMessage = errors.length
+      ? `\n${errors.length} पंक्तियाँ इम्पोर्ट नहीं हुईं:\n${errors.slice(0, 5).join("\n")}`
+      : "";
+
+    alert(
+      `${imported.length} प्रश्न Supabase में सफलतापूर्वक सेव हुए।` +
+      errorMessage
+    );
+
+  } catch (error) {
+    console.error("Excel Import Error:", error);
+    alert("Excel इम्पोर्ट में समस्या आई।");
+  } finally {
+    e.target.value = "";
   }
+}
+
   
   const filteredQuestions = questions.filter((q) =>
     (!filterSubject || q.subject === filterSubject) &&
@@ -1768,7 +1848,7 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
                 placeholder="विषय का नाम लिखें"
                 className="w-full border rounded-lg p-3 mb-3"
               />
-              <button onClick={addSubject} className="w-full bg-blue-950 text-white p-3 rounded-lg font-bold">
+           <button onClick={addSubject} className="w-full bg-blue-950 text-white p-3 rounded-lg font-bold">
                 + विषय जोड़ें
               </button>
 
@@ -1845,11 +1925,11 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
   <p className="text-slate-500">पहले विषय चुनें।</p>
 ) : (
   <div className="space-y-2">
-    {(topics[selectedSubject] || []).map((topic) => {
+   {(topics[selectedSubject] || []).map((topic, index) => {
       const key = `${selectedSubject}::${topic}`;
 
       return (
-        <div key={topic} className="border rounded-lg p-3 flex flex-wrap justify-between items-center gap-2">
+        <div key={`${topic}-${index}`}className="border rounded-lg p-3 flex flex-wrap justify-between items-center gap-2">
           <span className="font-medium">{topic}</span>
           <div className="flex items-center gap-2">
             <button
