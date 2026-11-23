@@ -517,9 +517,6 @@ useEffect(() => {
     setTopics(newTopics);
     setQuestions(newQuestions);
 
-    console.log("Supabase Questions Count:", questionRows?.length);
-    alert("Supabase में कुल प्रश्न: " + questionRows?.length);
-    console.log("Supabase Data Loaded Successfully");
   }
 
   loadSupabaseData();
