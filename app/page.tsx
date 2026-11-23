@@ -443,6 +443,87 @@ useEffect(() => {
     localStorage.setItem("topper_topic_times", JSON.stringify(topicTimes));
     localStorage.setItem("topper_questions", JSON.stringify(questions));
   }, [subjects, topics, questions, topicTimes, loaded]);
+  useEffect(() => {
+  async function loadSupabaseData() {
+    // पुराने ब्राउज़र डेटा का बैकअप
+    if (!localStorage.getItem("topper_backup_questions")) {
+      const oldData = localStorage.getItem("topper_questions");
+      if (oldData) {
+        localStorage.setItem("topper_backup_questions", oldData);
+      }
+    }
+
+    const { data: subjectRows, error: subjectError } =
+      await supabase.from("subjects").select("id, name");
+
+    const { data: topicRows, error: topicError } =
+      await supabase.from("topics").select("id, subject_id, name");
+
+    const { data: questionRows, error: questionError } =
+      await supabase
+        .from("questions")
+        .select("id, subject_id, topic_id, question, options, correct, explanation");
+
+    if (subjectError || topicError || questionError) {
+      console.log("Supabase Load Error:", subjectError || topicError || questionError);
+      return;
+    }
+
+    if (!subjectRows?.length || !topicRows?.length) {
+      console.log("Supabase में Subjects या Topics नहीं मिले");
+      return;
+    }
+
+    const subjectMap = new Map(
+      subjectRows.map((s) => [String(s.id), s.name])
+    );
+
+    const topicMap = new Map(
+      topicRows.map((t) => [
+        String(t.id),
+        { name: t.name, subjectId: String(t.subject_id) },
+      ])
+    );
+
+    const newTopics: Record<string, string[]> = {};
+
+    subjectRows.forEach((s) => {
+      newTopics[s.name] = [];
+    });
+
+    topicRows.forEach((t) => {
+      const subjectName = subjectMap.get(String(t.subject_id));
+      if (subjectName) {
+        newTopics[subjectName].push(t.name);
+      }
+    });
+
+    const newQuestions = (questionRows || []).map((q) => {
+      const topic = topicMap.get(String(q.topic_id));
+      const subject = subjectMap.get(String(q.subject_id));
+
+      return {
+        id: Number(q.id),
+        subject: subject || "",
+        topic: topic?.name || "",
+        question: q.question,
+        options: q.options,
+        correct: Number(q.correct),
+        explanation: q.explanation || "",
+      };
+    });
+
+    setSubjects(subjectRows.map((s) => s.name));
+    setTopics(newTopics);
+    setQuestions(newQuestions);
+
+    console.log("Supabase Questions Count:", questionRows?.length);
+    alert("Supabase में कुल प्रश्न: " + questionRows?.length);
+    console.log("Supabase Data Loaded Successfully");
+  }
+
+  loadSupabaseData();
+}, []);
 async function logoutAdmin() {
   const { error } = await supabase.auth.signOut();
 
