@@ -672,19 +672,67 @@ function moveTopic(topic: string, direction: number) {
 }
 
 
-  function deleteTopic(name: string) {
-    if (!confirm(`क्या "${name}" टॉपिक हटाना चाहते हैं?`)) return;
+ async function deleteTopic(name: string) {
+  if (!confirm(`क्या "${name}" टॉपिक और उसके सभी प्रश्न हटाना चाहते हैं?`)) return;
 
-    setTopics({
-      ...topics,
-      [selectedSubject]: (topics[selectedSubject] || []).filter((t) => t !== name),
-    });
+  // Subject ID निकालें
+  const { data: subjectData, error: subjectError } = await supabase
+    .from("subjects")
+    .select("id")
+    .eq("name", selectedSubject)
+    .single();
 
-    setQuestions(questions.filter(
-      (q) => !(q.subject === selectedSubject && q.topic === name)
-    ));
+  if (subjectError || !subjectData) {
+    alert("Subject नहीं मिला: " + subjectError?.message);
+    return;
   }
 
+  // Topic ID निकालें
+  const { data: topicData, error: topicError } = await supabase
+    .from("topics")
+    .select("id")
+    .eq("subject_id", subjectData.id)
+    .eq("name", name)
+    .single();
+
+  if (topicError || !topicData) {
+    alert("Topic नहीं मिला: " + topicError?.message);
+    return;
+  }
+
+  // पहले उस Topic के प्रश्न हटाएँ
+  const { error: questionError } = await supabase
+    .from("questions")
+    .delete()
+    .eq("topic_id", topicData.id);
+
+  if (questionError) {
+    alert("प्रश्न नहीं हटे: " + questionError.message);
+    return;
+  }
+
+  // फिर Topic हटाएँ
+  const { error: deleteError } = await supabase
+    .from("topics")
+    .delete()
+    .eq("id", topicData.id);
+
+  if (deleteError) {
+    alert("Topic नहीं हटा: " + deleteError.message);
+    return;
+  }
+
+  setTopics((previous) => ({
+    ...previous,
+    [selectedSubject]: (previous[selectedSubject] || []).filter((t) => t !== name),
+  }));
+
+  setQuestions((previous) =>
+    previous.filter((q) => !(q.subject === selectedSubject && q.topic === name))
+  );
+
+  alert("Topic और उसके प्रश्न सफलतापूर्वक हट गए।");
+}
 async function addTopic() {
   const name = newTopic.trim();
 
