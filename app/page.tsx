@@ -155,12 +155,8 @@ const openNotifications = () => {
 
   const matching = questions.filter(
     (q) => q.subject === selectedSubject && q.topic === topic
-
   );
-console.log("Selected Subject:", selectedSubject);
-console.log("Selected Topic:", topic);
-console.log("Total Questions:", questions.length, "Matching:", matching.length);
-    
+
   if (matching.length === 0) {
     alert("इस टॉपिक में अभी प्रश्न उपलब्ध नहीं हैं।");
     setLoginOpen(false);
