@@ -168,6 +168,7 @@ const openNotifications = () => {
   setAnswers({});
   setCurrentQuestion(0);
   setLoginOpen(false);
+  setTimeLeft((topicTimes[`${selectedSubject}::${topic}`] ?? 30) * 60);
   setPage("test");
 };
 
@@ -1746,7 +1747,7 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
   onClick={() => {
     setAnswers({});
     setCurrentQuestion(0);
-    setTimeLeft(30 * 60);
+   setTimeLeft((topicTimes[`${selectedSubject}::${selectedTopic}`] ?? 30) * 60);
     setPage("test");
   }}
   className="w-full mb-3 bg-green-600 text-white py-3 rounded-lg font-bold"
