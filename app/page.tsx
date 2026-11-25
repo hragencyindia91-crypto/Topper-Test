@@ -465,6 +465,7 @@ useEffect(() => {
         .select("id, subject_id, topic_id, question, options, correct, explanation");
 
     if (subjectError || topicError || questionError) {
+      console.log("Supabase से Questions आए:", questionRows?.length);
       console.log("Supabase Load Error:", subjectError || topicError || questionError);
       return;
     }
@@ -2085,14 +2086,9 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
               }
               className="w-20 border rounded p-2"
             />
-            <span className="text-sm">मिनट</span>
-
-            <button onClick={() => editTopic(topic)} className="text-blue-700 text-sm font-semibold">बदलें</button>
-            <button onClick={() => deleteTopic(topic)} className="text-red-600 text-sm font-semibold">हटाएँ</button>
-          </div>
-        </div>
-      );
-    })}
+           
+           
+    
   </div>
 )}
             </div>
