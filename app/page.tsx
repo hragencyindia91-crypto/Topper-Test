@@ -465,7 +465,6 @@ useEffect(() => {
         .select("id, subject_id, topic_id, question, options, correct, explanation");
 
     if (subjectError || topicError || questionError) {
-      console.log("Supabase से Questions आए:", questionRows?.length);
       console.log("Supabase Load Error:", subjectError || topicError || questionError);
       return;
     }
