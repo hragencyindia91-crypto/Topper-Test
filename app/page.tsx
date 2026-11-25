@@ -465,10 +465,30 @@ useEffect(() => {
     const { data: topicRows, error: topicError } =
       await supabase.from("topics").select("id, subject_id, name");
 
-    const { data: questionRows, error: questionError } =
-      await supabase
-        .from("questions")
-        .select("id, subject_id, topic_id, question, options, correct, explanation");
+   let questionRows: any[] = [];
+let questionError = null;
+let from = 0;
+const pageSize = 500;
+
+while (true) {
+  const { data, error } = await supabase
+    .from("questions")
+    .select("id, subject_id, topic_id, question, options, correct, explanation")
+    .range(from, from + pageSize - 1);
+
+  if (error) {
+    questionError = error;
+    break;
+  }
+
+  if (!data || data.length === 0) break;
+
+  questionRows = [...questionRows, ...data];
+
+  if (data.length < pageSize) break;
+
+  from += pageSize;
+}
 
     if (subjectError || topicError || questionError) {
       console.log("Supabase Load Error:", subjectError || topicError || questionError);
