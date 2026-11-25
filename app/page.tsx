@@ -155,7 +155,7 @@ const openNotifications = () => {
 
   const matching = questions.filter(
     (q) => q.subject === selectedSubject && q.topic === topic
-    alert("चुना विषय: " + selectedSubject + "\nचुना टॉपिक: " + topic + "\nकुल प्रश्न: " + questions.length + "\nपहले 3 प्रश्न: " + JSON.stringify(questions.slice(0, 3).map(q => ({subject: q.subject, topic: q.topic}))));
+
   );
 console.log("Selected Subject:", selectedSubject);
 console.log("Selected Topic:", topic);
