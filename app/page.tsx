@@ -156,7 +156,12 @@ const openNotifications = () => {
   const matching = questions.filter(
     (q) => q.subject === selectedSubject && q.topic === topic
   );
-
+alert(JSON.stringify({
+  selectedSubject,
+  selectedTopic: topic,
+  totalQuestions: questions.length,
+  firstQuestion: questions[0],
+}, null, 2));
   if (matching.length === 0) {
     alert("इस टॉपिक में अभी प्रश्न उपलब्ध नहीं हैं।");
     setLoginOpen(false);
