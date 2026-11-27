@@ -31,8 +31,8 @@ export const metadata: Metadata = {
     "Rajasthan Current Affairs",
     "Rajasthan CET Preparation",
     "Rajasthan GK Online Test",
-    "Rajasthan Mock Test"
-    "Rajasthan pyq",
+    "Rajasthan Mock Test",
+    "Rajasthan PYQ",
     "TOPPER TEST",
   ],
 };
