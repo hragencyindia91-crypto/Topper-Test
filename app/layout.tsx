@@ -16,27 +16,25 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://toppertest.online"),
-  title: "TOPPER TEST – Rajasthan GK Online Test & Mock Test",
+  title: "Rajasthan GK in Hindi, Notes, Questions & Mock Tests | TOPPER TEST",
   description:
-    "राजस्थान GK, इतिहास, भूगोल, कला-संस्कृति और प्रतियोगी परीक्षाओं की तैयारी के लिए Topic Wise Online Tests, Practice Questions और Mock Tests दें।",
+    "राजस्थान GK हिंदी में पढ़ें। राजस्थान इतिहास, भूगोल, कला-संस्कृति, राजनीति, करंट अफेयर्स के नोट्स, महत्वपूर्ण प्रश्न और ऑनलाइन मॉक टेस्ट से तैयारी करें।",
   keywords: [
-    "Rajasthan GK Test",
+    "Rajasthan GK",
+    "Rajasthan GK in Hindi",
+    "Rajasthan GK Notes",
+    "Rajasthan History",
+    "Rajasthan Geography",
+    "Rajasthan Art and Culture",
+    "Rajasthan Polity",
+    "Rajasthan GK Questions",
+    "Rajasthan Current Affairs",
+    "Rajasthan CET Preparation",
     "Rajasthan GK Online Test",
-    "Rajasthan GK Mock Test",
-    "Rajasthan CET Mock Test",
-    "Rajasthan Police SI Test",
-    "Rajasthan LDC Test",
+    "Rajasthan Mock Test"
+    "Rajasthan pyq"
     "TOPPER TEST",
   ],
-  openGraph: {
-    title: "TOPPER TEST – Rajasthan GK Online Test",
-    description:
-      "राजस्थान प्रतियोगी परीक्षाओं की तैयारी करें Topic Wise Online Tests और Mock Tests के साथ।",
-    url: "https://toppertest.online",
-    siteName: "TOPPER TEST",
-    locale: "hi_IN",
-    type: "website",
-  },
 };
 
 
