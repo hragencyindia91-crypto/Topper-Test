@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     "Rajasthan CET Preparation",
     "Rajasthan GK Online Test",
     "Rajasthan Mock Test"
-    "Rajasthan pyq"
+    "Rajasthan pyq",
     "TOPPER TEST",
   ],
 };
