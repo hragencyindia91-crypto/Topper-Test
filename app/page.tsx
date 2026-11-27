@@ -70,6 +70,8 @@ export default function Home() {
 
 
   const [page, setPage] = useState("home");
+  const [visitorStats, setVisitorStats] = useState<any[]>([]);
+const [visitorLoading, setVisitorLoading] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
 
@@ -1808,21 +1810,15 @@ className="relative bg-slate-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-
 </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white border rounded-xl p-5">
-              <p className="text-slate-500">कुल विषय</p>
-              <h3 className="text-3xl font-bold">{subjects.length}</h3>
-            </div>
-            <div className="bg-white border rounded-xl p-5">
-              <p className="text-slate-500">कुल टॉपिक</p>
-              <h3 className="text-3xl font-bold">{totalTopics}</h3>
-            </div>
-            <div className="bg-white border rounded-xl p-5">
-              <p className="text-slate-500">कुल प्रश्न</p>
-              <h3 className="text-3xl font-bold">{questions.length}</h3>
-            </div>
-          </div>
-
+         <div className="bg-white border rounded-xl p-5 mb-6">
+  <h3 className="text-xl font-bold mb-4">Website Visitors</h3>
+  <button
+    onClick={() => (window.location.href = "/visitors")}
+    className="bg-blue-950 text-white px-5 py-3 rounded-lg font-semibold"
+  >
+    Visitor Analytics देखें
+  </button>
+</div>
           <div className="flex flex-wrap gap-3 mb-6">
             <button onClick={() => setPage("admin")} className="bg-blue-950 text-white px-5 py-3 rounded-lg font-semibold">
               विषय और टॉपिक
