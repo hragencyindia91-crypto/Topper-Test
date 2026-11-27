@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_X5Mg8Bey3lmFisOoU79Fqlk0h8IQ",
+      "name": "topper-test",
+      "directory": ".",
+      "orgId": "team_kFKEuKYlSc7zAwixu2Cbvbia"
+    }
+  ]
+}
